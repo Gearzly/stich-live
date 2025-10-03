@@ -1,216 +1,228 @@
 import { Context } from 'hono';
-import { getFirestore } from 'firebase-admin/firestore';
-import { createLogger } from '../../utils/logger';
-import { ApiResponse, User, UserPreferences, PaginatedResponse } from '../../types/api';
+import { UserManagementService } from '../../services/UserManagementService';
+import { createSuccessResponse, createErrorResponse } from '../../utils/response';
 import { AuthUser } from '../../middleware/auth';
 
-const logger = createLogger('UsersController');
-const db = getFirestore();
-
 export class UsersController {
-  static async getUsers(c: Context): Promise<Response> {
+  private userService: UserManagementService;
+
+  constructor() {
+    this.userService = new UserManagementService();
+  }
+
+  /**
+   * Creates a new user (admin only)
+   */
+  async createUser(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       
-      // Only admins can list all users
+      // Check admin permissions
       if (user.role !== 'admin') {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Insufficient permissions'), 403);
+      }
+
+      const body = await c.req.json();
+      const newUser = await this.userService.createUser(body);
+
+      return c.json(createSuccessResponse(newUser), 201);
+    } catch (error) {
+      return this.handleControllerError(c, error, 'createUser');
+    }
+  }
+
+  /**
+   * Retrieves all users with pagination (admin only)
+   */
+  async getUsers(c: Context): Promise<Response> {
+    try {
+      const user = c.get('user') as AuthUser;
+      
+      // Check admin permissions
+      if (user.role !== 'admin') {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Insufficient permissions'), 403);
       }
 
       const page = parseInt(c.req.query('page') || '1');
       const limit = parseInt(c.req.query('limit') || '10');
-      const offset = (page - 1) * limit;
 
-      const usersRef = db.collection('users');
-      const snapshot = await usersRef.offset(offset).limit(limit).get();
-      const countSnapshot = await usersRef.count().get();
+      const result = await this.userService.getUsers(page, limit, user.role);
 
-      const users: User[] = [];
-      snapshot.forEach(doc => {
-        users.push({ id: doc.id, ...doc.data() } as User);
-      });
-
-      const total = countSnapshot.data().count;
-      const totalPages = Math.ceil(total / limit);
-
-      const response: ApiResponse<PaginatedResponse<User>> = {
-        success: true,
-        data: {
-          data: users,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-          },
-        },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get users error:', error);
-      return c.json({ success: false, error: 'Failed to get users' }, 500);
+      return c.json(createSuccessResponse(result));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getUsers');
     }
   }
 
-  static async getUserById(c: Context): Promise<Response> {
+  /**
+   * Retrieves current user's profile
+   */
+  async getCurrentUser(c: Context): Promise<Response> {
+    try {
+      const user = c.get('user') as AuthUser;
+      const userProfile = await this.userService.findUserById(user.uid);
+
+      return c.json(createSuccessResponse(userProfile));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getCurrentUser');
+    }
+  }
+
+  /**
+   * Retrieves a specific user by ID (admin only or own profile)
+   */
+  async getUserById(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const userId = c.req.param('id');
 
-      // Users can only access their own data, admins can access any
+      if (!userId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'User ID is required'), 400);
+      }
+
+      // Allow users to access their own profile or admins to access any profile
       if (user.uid !== userId && user.role !== 'admin') {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Insufficient permissions'), 403);
       }
 
-      const userDoc = await db.collection('users').doc(userId).get();
+      const userProfile = await this.userService.findUserById(userId);
 
-      if (!userDoc.exists) {
-        return c.json({ success: false, error: 'User not found' }, 404);
-      }
-
-      const userData = { id: userDoc.id, ...userDoc.data() } as User;
-
-      const response: ApiResponse<User> = {
-        success: true,
-        data: userData,
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get user by ID error:', error);
-      return c.json({ success: false, error: 'Failed to get user' }, 500);
+      return c.json(createSuccessResponse(userProfile));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getUserById');
     }
   }
 
-  static async updateUser(c: Context): Promise<Response> {
+  /**
+   * Updates a user's profile
+   */
+  async updateUser(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const userId = c.req.param('id');
-      const updateData = await c.req.json();
+      const body = await c.req.json();
 
-      // Users can only update their own data, admins can update any
-      if (user.uid !== userId && user.role !== 'admin') {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+      if (!userId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'User ID is required'), 400);
       }
 
-      // Remove sensitive fields that shouldn't be updated directly
-      const { id, createdAt, ...safeUpdateData } = updateData;
-      safeUpdateData.updatedAt = new Date();
+      // Allow users to update their own profile or admins to update any profile
+      if (user.uid !== userId && user.role !== 'admin') {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Insufficient permissions'), 403);
+      }
 
-      await db.collection('users').doc(userId).update(safeUpdateData);
+      const updatedUser = await this.userService.updateUser(userId, body, user.uid, user.role);
 
-      logger.info('User updated successfully', { userId, updatedBy: user.uid });
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'User updated successfully' },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Update user error:', error);
-      return c.json({ success: false, error: 'Failed to update user' }, 500);
+      return c.json(createSuccessResponse(updatedUser));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'updateUser');
     }
   }
 
-  static async deleteUser(c: Context): Promise<Response> {
+  /**
+   * Deletes a user (admin only)
+   */
+  async deleteUser(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const userId = c.req.param('id');
 
-      // Users can delete their own account, admins can delete any
-      if (user.uid !== userId && user.role !== 'admin') {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+      if (!userId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'User ID is required'), 400);
       }
 
-      // Delete user from Firestore
-      await db.collection('users').doc(userId).delete();
+      // Check admin permissions
+      if (user.role !== 'admin') {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Insufficient permissions'), 403);
+      }
 
-      // Also delete from Firebase Auth if it's the user's own account
+      // Prevent self-deletion
       if (user.uid === userId) {
-        const { auth } = await import('firebase-admin');
-        await auth().deleteUser(userId);
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'Cannot delete your own account'), 400);
       }
 
-      logger.info('User deleted successfully', { userId, deletedBy: user.uid });
+      await this.userService.deleteUser(userId, user.uid, user.role);
 
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'User deleted successfully' },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Delete user error:', error);
-      return c.json({ success: false, error: 'Failed to delete user' }, 500);
+      return c.json(createSuccessResponse({ message: 'User deleted successfully' }));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'deleteUser');
     }
   }
 
-  static async getUserPreferences(c: Context): Promise<Response> {
+  /**
+   * Updates user preferences
+   */
+  async updateUserPreferences(c: Context): Promise<Response> {
+    try {
+      const user = c.get('user') as AuthUser;
+      const userId = c.req.param('id');
+      const body = await c.req.json();
+
+      if (!userId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'User ID is required'), 400);
+      }
+
+      // Only allow users to update their own preferences
+      if (user.uid !== userId) {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Can only update your own preferences'), 403);
+      }
+
+      const preferences = await this.userService.updateUserPreferences(userId, body, user.uid);
+
+      return c.json(createSuccessResponse(preferences));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'updateUserPreferences');
+    }
+  }
+
+  /**
+   * Retrieves user preferences
+   */
+  async getUserPreferences(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const userId = c.req.param('id');
 
-      // Users can only access their own preferences
+      if (!userId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'User ID is required'), 400);
+      }
+
+      // Only allow users to view their own preferences
       if (user.uid !== userId) {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', 'Can only view your own preferences'), 403);
       }
 
-      const userDoc = await db.collection('users').doc(userId).get();
+      const preferences = await this.userService.getUserPreferences(userId, user.uid);
 
-      if (!userDoc.exists) {
-        return c.json({ success: false, error: 'User not found' }, 404);
-      }
-
-      const userData = userDoc.data() as User;
-      const preferences = userData.preferences || {
-        theme: 'light',
-        notifications: true,
-        language: 'en',
-      };
-
-      const response: ApiResponse<UserPreferences> = {
-        success: true,
-        data: preferences,
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get user preferences error:', error);
-      return c.json({ success: false, error: 'Failed to get preferences' }, 500);
+      return c.json(createSuccessResponse(preferences));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getUserPreferences');
     }
   }
 
-  static async updateUserPreferences(c: Context): Promise<Response> {
-    try {
-      const user = c.get('user') as AuthUser;
-      const userId = c.req.param('id');
-      const preferences = await c.req.json();
+  /**
+   * Standardized error handling for controller methods
+   */
+  private handleControllerError(c: Context, error: unknown, operation: string): Response {
+    console.error(`UsersController.${operation}:`, error);
 
-      // Users can only update their own preferences
-      if (user.uid !== userId) {
-        return c.json({ success: false, error: 'Insufficient permissions' }, 403);
+    if (error instanceof Error) {
+      // Handle specific error types
+      if (error.name === 'ValidationError') {
+        return c.json(createErrorResponse('VALIDATION_ERROR', error.message), 400);
       }
-
-      await db.collection('users').doc(userId).update({
-        preferences,
-        updatedAt: new Date(),
-      });
-
-      logger.info('User preferences updated', { userId });
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'Preferences updated successfully' },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Update preferences error:', error);
-      return c.json({ success: false, error: 'Failed to update preferences' }, 500);
+      if (error.name === 'NotFoundError') {
+        return c.json(createErrorResponse('NOT_FOUND', error.message), 404);
+      }
+      if (error.name === 'AuthorizationError') {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', error.message), 403);
+      }
+      if (error.name === 'APIError') {
+        const apiError = error as any;
+        return c.json(createErrorResponse(apiError.code, error.message), apiError.statusCode);
+      }
     }
+
+    return c.json(createErrorResponse('INTERNAL_ERROR', 'Internal server error'), 500);
   }
 }

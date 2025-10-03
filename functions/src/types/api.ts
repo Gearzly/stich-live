@@ -86,12 +86,26 @@ export interface GenerationSession {
   id: string;
   userId: string;
   appId: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed';
   prompt: string;
+  provider: AIProviderName;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  stream: boolean;
+  progress: number;
   createdAt: Date;
   updatedAt: Date;
+  generatedFiles: Array<{ path: string; content: string; type: string }>;
   result?: GenerationResult;
   error?: string;
+  metadata?: {
+    startTime?: number;
+    endTime?: number;
+    duration?: number;
+    estimatedDuration?: number;
+    [key: string]: any;
+  };
 }
 
 export interface GenerationResult {
@@ -115,8 +129,10 @@ export interface FileStructure {
 }
 
 // AI Provider types
+export type AIProviderName = 'openai' | 'anthropic' | 'google' | 'cerebras';
+
 export interface AIProvider {
-  name: 'openai' | 'anthropic' | 'google' | 'cerebras';
+  name: AIProviderName;
   model: string;
   apiKey: string;
   maxTokens?: number;

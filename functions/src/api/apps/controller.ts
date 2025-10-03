@@ -1,352 +1,203 @@
 import { Context } from 'hono';
-import { getFirestore } from 'firebase-admin/firestore';
-import { createLogger } from '../../utils/logger';
-import { ApiResponse, App, CreateAppRequest, UpdateAppRequest, GenerateCodeRequest, PaginatedResponse } from '../../types/api';
+import { AppManagementService } from '../../services/AppManagementService';
+import { createSuccessResponse, createErrorResponse } from '../../utils/response';
 import { AuthUser } from '../../middleware/auth';
 
-const logger = createLogger('AppsController');
-const db = getFirestore();
-
 export class AppsController {
-  static async getApps(c: Context): Promise<Response> {
+  private appService: AppManagementService;
+
+  constructor() {
+    this.appService = new AppManagementService();
+  }
+
+  /**
+   * Creates a new application
+   */
+  async createApp(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
-      const page = parseInt(c.req.query('page') || '1');
-      const limit = parseInt(c.req.query('limit') || '10');
-      const offset = (page - 1) * limit;
+      const body = await c.req.json();
 
-      let query = db.collection('apps').where('userId', '==', user.uid);
+      const app = await this.appService.createApp(user.uid, body);
+
+      return c.json(createSuccessResponse(app), 201);
+    } catch (error) {
+      return this.handleControllerError(c, error, 'createApp');
+    }
+  }
+
+  /**
+   * Retrieves user's applications with pagination
+   */
+  async getUserApps(c: Context): Promise<Response> {
+    try {
+      const user = c.get('user') as AuthUser;
       
-      // Add sorting
-      const sortBy = c.req.query('sortBy') || 'createdAt';
-      const sortOrder = c.req.query('sortOrder') || 'desc';
-      query = query.orderBy(sortBy, sortOrder as 'asc' | 'desc');
-
-      const snapshot = await query.offset(offset).limit(limit).get();
-      const countSnapshot = await db.collection('apps')
-        .where('userId', '==', user.uid)
-        .count()
-        .get();
-
-      const apps: App[] = [];
-      snapshot.forEach(doc => {
-        apps.push({ id: doc.id, ...doc.data() } as App);
-      });
-
-      const total = countSnapshot.data().count;
-      const totalPages = Math.ceil(total / limit);
-
-      const response: ApiResponse<PaginatedResponse<App>> = {
-        success: true,
-        data: {
-          data: apps,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-          },
-        },
+      const paginationData = {
+        page: c.req.query('page'),
+        limit: c.req.query('limit'),
+        sortBy: c.req.query('sortBy'),
+        sortOrder: c.req.query('sortOrder')
       };
 
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get apps error:', error);
-      return c.json({ success: false, error: 'Failed to get apps' }, 500);
+      const result = await this.appService.getUserApps(user.uid, paginationData);
+
+      return c.json(createSuccessResponse(result));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getUserApps');
     }
   }
 
-  static async createApp(c: Context): Promise<Response> {
-    try {
-      const user = c.get('user') as AuthUser;
-      const appData: CreateAppRequest = await c.req.json();
-
-      // Validate required fields
-      if (!appData.name || !appData.description) {
-        return c.json({ success: false, error: 'Name and description are required' }, 400);
-      }
-
-      const newApp: Omit<App, 'id'> = {
-        userId: user.uid,
-        name: appData.name,
-        description: appData.description,
-        status: 'draft',
-        config: appData.config,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const docRef = await db.collection('apps').add(newApp);
-
-      logger.info('App created successfully', { appId: docRef.id, userId: user.uid });
-
-      const response: ApiResponse<{ id: string }> = {
-        success: true,
-        data: { id: docRef.id },
-      };
-
-      return c.json(response, 201);
-    } catch (error: any) {
-      logger.error('Create app error:', error);
-      return c.json({ success: false, error: 'Failed to create app' }, 500);
-    }
-  }
-
-  static async getAppById(c: Context): Promise<Response> {
+  /**
+   * Retrieves a specific application by ID
+   */
+  async getAppById(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const appId = c.req.param('id');
 
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
+      if (!appId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'App ID is required'), 400);
       }
 
-      const appData = { id: appDoc.id, ...appDoc.data() } as App;
+      const app = await this.appService.getAppById(appId, user.uid);
 
-      // Check if user owns the app
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
-      }
-
-      const response: ApiResponse<App> = {
-        success: true,
-        data: appData,
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get app by ID error:', error);
-      return c.json({ success: false, error: 'Failed to get app' }, 500);
+      return c.json(createSuccessResponse(app));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getAppById');
     }
   }
 
-  static async updateApp(c: Context): Promise<Response> {
+  /**
+   * Updates an existing application
+   */
+  async updateApp(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const appId = c.req.param('id');
-      const updateData: UpdateAppRequest = await c.req.json();
+      const body = await c.req.json();
 
-      // First check if app exists and user owns it
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
+      if (!appId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'App ID is required'), 400);
       }
 
-      const appData = appDoc.data() as App;
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
-      }
+      const app = await this.appService.updateApp(appId, user.uid, body);
 
-      // Update the app
-      const updateFields = {
-        ...updateData,
-        updatedAt: new Date(),
-      };
-
-      await db.collection('apps').doc(appId).update(updateFields);
-
-      logger.info('App updated successfully', { appId, userId: user.uid });
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'App updated successfully' },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Update app error:', error);
-      return c.json({ success: false, error: 'Failed to update app' }, 500);
+      return c.json(createSuccessResponse(app));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'updateApp');
     }
   }
 
-  static async deleteApp(c: Context): Promise<Response> {
+  /**
+   * Deletes an application
+   */
+  async deleteApp(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const appId = c.req.param('id');
 
-      // First check if app exists and user owns it
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
+      if (!appId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'App ID is required'), 400);
       }
 
-      const appData = appDoc.data() as App;
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
-      }
+      await this.appService.deleteApp(appId, user.uid);
 
-      // Delete the app and related data
-      await db.collection('apps').doc(appId).delete();
-
-      // TODO: Also delete related generation sessions and files
-
-      logger.info('App deleted successfully', { appId, userId: user.uid });
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'App deleted successfully' },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Delete app error:', error);
-      return c.json({ success: false, error: 'Failed to delete app' }, 500);
+      return c.json(createSuccessResponse({ message: 'App deleted successfully' }));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'deleteApp');
     }
   }
 
-  static async generateApp(c: Context): Promise<Response> {
+  /**
+   * Updates application status
+   */
+  async updateAppStatus(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const appId = c.req.param('id');
-      const generateRequest: GenerateCodeRequest = await c.req.json();
+      const body = await c.req.json();
 
-      // First check if app exists and user owns it
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
+      if (!appId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'App ID is required'), 400);
       }
 
-      const appData = appDoc.data() as App;
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
+      if (!body.status) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'Status is required'), 400);
       }
 
-      // Update app status to generating
-      await db.collection('apps').doc(appId).update({
-        status: 'generating',
-        updatedAt: new Date(),
-      });
+      await this.appService.updateAppStatus(appId, user.uid, body.status);
 
-      // TODO: Implement actual AI code generation logic
-      // For now, just return a success response
-
-      logger.info('App generation started', { appId, userId: user.uid });
-
-      const response: ApiResponse<{ message: string; sessionId?: string }> = {
-        success: true,
-        data: { message: 'Code generation started' },
-      };
-
-      return c.json(response, 202);
-    } catch (error: any) {
-      logger.error('Generate app error:', error);
-      return c.json({ success: false, error: 'Failed to start generation' }, 500);
+      return c.json(createSuccessResponse({ message: 'App status updated successfully' }));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'updateAppStatus');
     }
   }
 
-  static async deployApp(c: Context): Promise<Response> {
+  /**
+   * Updates application metadata
+   */
+  async updateAppMetadata(c: Context): Promise<Response> {
     try {
       const user = c.get('user') as AuthUser;
       const appId = c.req.param('id');
+      const body = await c.req.json();
 
-      // First check if app exists and user owns it
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
+      if (!appId) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'App ID is required'), 400);
       }
 
-      const appData = appDoc.data() as App;
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
-      }
+      await this.appService.updateAppMetadata(appId, user.uid, body);
 
-      if (appData.status !== 'ready') {
-        return c.json({ success: false, error: 'App is not ready for deployment' }, 400);
-      }
-
-      // TODO: Implement actual deployment logic to Vercel/Netlify
-
-      logger.info('App deployment started', { appId, userId: user.uid });
-
-      const response: ApiResponse<{ message: string; deploymentUrl?: string }> = {
-        success: true,
-        data: { message: 'Deployment started' },
-      };
-
-      return c.json(response, 202);
-    } catch (error: any) {
-      logger.error('Deploy app error:', error);
-      return c.json({ success: false, error: 'Failed to start deployment' }, 500);
+      return c.json(createSuccessResponse({ message: 'App metadata updated successfully' }));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'updateAppMetadata');
     }
   }
 
-  static async getAppStatus(c: Context): Promise<Response> {
+  /**
+   * Retrieves public applications
+   */
+  async getPublicApps(c: Context): Promise<Response> {
     try {
-      const user = c.get('user') as AuthUser;
-      const appId = c.req.param('id');
-
-      const appDoc = await db.collection('apps').doc(appId).get();
-
-      if (!appDoc.exists) {
-        return c.json({ success: false, error: 'App not found' }, 404);
-      }
-
-      const appData = { id: appDoc.id, ...appDoc.data() } as App;
-
-      if (appData.userId !== user.uid) {
-        return c.json({ success: false, error: 'Access denied' }, 403);
-      }
-
-      const response: ApiResponse<{ status: string; metadata?: any }> = {
-        success: true,
-        data: {
-          status: appData.status,
-          metadata: appData.metadata,
-        },
+      const paginationData = {
+        page: c.req.query('page'),
+        limit: c.req.query('limit'),
+        sortBy: c.req.query('sortBy'),
+        sortOrder: c.req.query('sortOrder')
       };
 
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get app status error:', error);
-      return c.json({ success: false, error: 'Failed to get app status' }, 500);
+      const result = await this.appService.getPublicApps(paginationData);
+
+      return c.json(createSuccessResponse(result));
+    } catch (error) {
+      return this.handleControllerError(c, error, 'getPublicApps');
     }
   }
 
-  static async getAppFiles(c: Context): Promise<Response> {
-    try {
-      const user = c.get('user') as AuthUser;
-      const appId = c.req.param('id');
+  /**
+   * Standardized error handling for controller methods
+   */
+  private handleControllerError(c: Context, error: unknown, operation: string): Response {
+    console.error(`AppsController.${operation}:`, error);
 
-      // TODO: Implement file retrieval from storage
-      // This would typically fetch from Firebase Storage or similar
-
-      const response: ApiResponse<{ files: any[] }> = {
-        success: true,
-        data: { files: [] },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get app files error:', error);
-      return c.json({ success: false, error: 'Failed to get app files' }, 500);
+    if (error instanceof Error) {
+      // Handle specific error types
+      if (error.name === 'ValidationError') {
+        return c.json(createErrorResponse('VALIDATION_ERROR', error.message), 400);
+      }
+      if (error.name === 'NotFoundError') {
+        return c.json(createErrorResponse('NOT_FOUND', error.message), 404);
+      }
+      if (error.name === 'AuthorizationError') {
+        return c.json(createErrorResponse('AUTHORIZATION_ERROR', error.message), 403);
+      }
+      if (error.name === 'APIError') {
+        const apiError = error as any;
+        return c.json(createErrorResponse(apiError.code, error.message), apiError.statusCode);
+      }
     }
-  }
 
-  static async getAppStructure(c: Context): Promise<Response> {
-    try {
-      const user = c.get('user') as AuthUser;
-      const appId = c.req.param('id');
-
-      // TODO: Implement structure retrieval
-      // This would return the file/folder structure of the generated app
-
-      const response: ApiResponse<{ structure: any }> = {
-        success: true,
-        data: { structure: null },
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      logger.error('Get app structure error:', error);
-      return c.json({ success: false, error: 'Failed to get app structure' }, 500);
-    }
+    return c.json(createErrorResponse('INTERNAL_ERROR', 'Internal server error'), 500);
   }
 }

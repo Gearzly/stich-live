@@ -4,15 +4,19 @@ import { UsersController } from './controller';
 
 export const usersRoutes = new Hono();
 
+// Create controller instance following dependency injection pattern
+const usersController = new UsersController();
+
 // All user routes require authentication
 usersRoutes.use('*', authMiddleware);
 
-// User management routes
-usersRoutes.get('/', UsersController.getUsers);
-usersRoutes.get('/:id', UsersController.getUserById);
-usersRoutes.put('/:id', UsersController.updateUser);
-usersRoutes.delete('/:id', UsersController.deleteUser);
+// User CRUD operations
+usersRoutes.get('/', (c) => usersController.getUsers(c));
+usersRoutes.get('/me', (c) => usersController.getCurrentUser(c));
+usersRoutes.get('/:id', (c) => usersController.getUserById(c));
+usersRoutes.put('/:id', (c) => usersController.updateUser(c));
+usersRoutes.delete('/:id', (c) => usersController.deleteUser(c));
 
 // User preferences
-usersRoutes.get('/:id/preferences', UsersController.getUserPreferences);
-usersRoutes.put('/:id/preferences', UsersController.updateUserPreferences);
+usersRoutes.get('/:id/preferences', (c) => usersController.getUserPreferences(c));
+usersRoutes.put('/:id/preferences', (c) => usersController.updateUserPreferences(c));

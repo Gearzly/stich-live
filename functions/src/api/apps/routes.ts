@@ -4,21 +4,22 @@ import { AppsController } from './controller';
 
 export const appsRoutes = new Hono();
 
+// Create controller instance following dependency injection pattern
+const appsController = new AppsController();
+
 // All app routes require authentication
 appsRoutes.use('*', authMiddleware);
 
 // App CRUD operations
-appsRoutes.get('/', AppsController.getApps);
-appsRoutes.post('/', AppsController.createApp);
-appsRoutes.get('/:id', AppsController.getAppById);
-appsRoutes.put('/:id', AppsController.updateApp);
-appsRoutes.delete('/:id', AppsController.deleteApp);
+appsRoutes.get('/', (c) => appsController.getUserApps(c));
+appsRoutes.post('/', (c) => appsController.createApp(c));
+appsRoutes.get('/:id', (c) => appsController.getAppById(c));
+appsRoutes.put('/:id', (c) => appsController.updateApp(c));
+appsRoutes.delete('/:id', (c) => appsController.deleteApp(c));
 
-// App generation and deployment
-appsRoutes.post('/:id/generate', AppsController.generateApp);
-appsRoutes.post('/:id/deploy', AppsController.deployApp);
-appsRoutes.get('/:id/status', AppsController.getAppStatus);
+// App management operations
+appsRoutes.put('/:id/status', (c) => appsController.updateAppStatus(c));
+appsRoutes.put('/:id/metadata', (c) => appsController.updateAppMetadata(c));
 
-// App files and structure
-appsRoutes.get('/:id/files', AppsController.getAppFiles);
-appsRoutes.get('/:id/structure', AppsController.getAppStructure);
+// Public app discovery (no auth required)
+appsRoutes.get('/public', (c) => appsController.getPublicApps(c));

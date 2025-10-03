@@ -4,19 +4,24 @@ import { AIController } from './controller';
 
 export const aiRoutes = new Hono();
 
+// Create controller instance following dependency injection pattern
+const aiController = new AIController();
+
 // All AI routes require authentication
 aiRoutes.use('*', authMiddleware);
 
 // AI generation endpoints
-aiRoutes.post('/generate', AIController.generateCode);
-aiRoutes.get('/sessions', AIController.getGenerationSessions);
-aiRoutes.get('/sessions/:id', AIController.getGenerationSession);
-aiRoutes.delete('/sessions/:id', AIController.deleteGenerationSession);
+aiRoutes.post('/generate', (c) => aiController.generateCode(c));
+aiRoutes.get('/generations/user', (c) => aiController.getUserGenerations(c));
+aiRoutes.get('/generations/:id', (c) => aiController.getGeneration(c));
+aiRoutes.delete('/generations/:id', (c) => aiController.deleteGeneration(c));
+aiRoutes.post('/generations/:id/cancel', (c) => aiController.cancelGeneration(c));
 
-// AI provider management
-aiRoutes.get('/providers', AIController.getAvailableProviders);
-aiRoutes.post('/providers/test', AIController.testProvider);
+// App-specific generations
+aiRoutes.get('/apps/:appId/generations', (c) => aiController.getAppGenerations(c));
 
 // Generation status and monitoring
-aiRoutes.get('/sessions/:id/status', AIController.getSessionStatus);
-aiRoutes.post('/sessions/:id/cancel', AIController.cancelGeneration);
+aiRoutes.put('/generations/:id/status', (c) => aiController.updateGenerationStatus(c));
+
+// User AI statistics
+aiRoutes.get('/stats', (c) => aiController.getUserAIStats(c));
