@@ -5,7 +5,7 @@ import {
   type AIResponse, 
   type AIProvider,
   type AIMessage 
-} from '@/services/AIService';
+} from '../services';
 
 export interface ChatSession {
   id: string;

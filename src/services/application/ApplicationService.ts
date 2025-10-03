@@ -5,7 +5,7 @@ import {
   limit as firestoreLimit,
   QueryConstraint 
 } from 'firebase/firestore';
-import { BaseService } from './BaseService';
+import { BaseService } from '../core/BaseService';
 
 // Application data types
 export interface Application {

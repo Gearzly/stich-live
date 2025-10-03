@@ -4,7 +4,7 @@ import {
   type UploadProgress,
   type FileUploadOptions,
   type FileInfo
-} from '@/services/StorageService';
+} from '../services';
 
 // Custom hook for file uploads
 export function useFileUpload() {

@@ -14,7 +14,7 @@ import {
   type AuthError
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { UserService, type UserProfile } from '@/services/UserService';
+import { UserService, type UserProfile } from '../services';
 
 export interface AuthUser extends User {
   profile?: UserProfile;

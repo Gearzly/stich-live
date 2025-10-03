@@ -1,4 +1,4 @@
-import { BaseService } from './BaseService';
+import { BaseService } from '../core/BaseService';
 import { AIService, type AIRequest, type AIResponse } from './AIService';
 import { PromptTemplateService, type PromptTemplate } from './PromptTemplateService';
 

@@ -5,7 +5,7 @@ import {
   type UserProfile, 
   type UpdateUserProfileData,
   type UpdatePreferencesData 
-} from '@/services/UserService';
+} from '../services';
 
 // Custom hook for user profile management
 export function useUserProfile() {

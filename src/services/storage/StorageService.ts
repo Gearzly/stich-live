@@ -12,7 +12,7 @@ import {
   UploadTaskSnapshot
 } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
-import { BaseService } from './BaseService';
+import { BaseService } from '../core/BaseService';
 
 // Storage types
 export interface FileUploadOptions {

@@ -13,7 +13,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
-import { BaseService } from './BaseService';
+import { BaseService } from '../core/BaseService';
 
 // User data types
 export interface UserProfile {

@@ -1,11 +1,21 @@
-// Service layer exports
-export { BaseService } from './BaseService';
-export { UserService } from './UserService';
-export { ApplicationService } from './ApplicationService';
-export { StorageService } from './StorageService';
-export { AIService } from './AIService';
-export { CodeGenerationService } from './CodeGenerationService';
-export { PromptTemplateService, promptTemplateService } from './PromptTemplateService';
+// Service layer exports - organized by category
+
+// Core services
+export { BaseService } from './core/BaseService';
+
+// User management services
+export { UserService } from './user/UserService';
+
+// Application services
+export { ApplicationService } from './application/ApplicationService';
+
+// Storage services
+export { StorageService } from './storage/StorageService';
+
+// AI services
+export { AIService } from './ai/AIService';
+export { CodeGenerationService } from './ai/CodeGenerationService';
+export { PromptTemplateService, promptTemplateService } from './ai/PromptTemplateService';
 
 // Re-export types
 export type {
@@ -13,7 +23,7 @@ export type {
   UpdateUserProfileData,
   UpdatePreferencesData,
   ChangePasswordData,
-} from './UserService';
+} from './user/UserService';
 
 export type {
   Application,
@@ -21,13 +31,13 @@ export type {
   UpdateApplicationData,
   ApplicationFilters,
   ApplicationSearchOptions,
-} from './ApplicationService';
+} from './application/ApplicationService';
 
 export type {
   FileUploadOptions,
   FileInfo,
   UploadProgress,
-} from './StorageService';
+} from './storage/StorageService';
 
 export type {
   AIProvider,
@@ -35,25 +45,25 @@ export type {
   AIRequest,
   AIResponse,
   AIProviderConfig,
-} from './AIService';
+} from './ai/AIService';
 
 export type {
   CodeGenerationRequest,
   CodeGenerationResult,
   GenerationPhase,
   ProjectGenerationPlan,
-} from './CodeGenerationService';
+} from './ai/CodeGenerationService';
 
 export type {
   PromptTemplate,
-} from './PromptTemplateService';
+} from './ai/PromptTemplateService';
 
 // Import classes for service instances
-import { UserService } from './UserService';
-import { ApplicationService } from './ApplicationService';
-import { StorageService } from './StorageService';
-import { AIService } from './AIService';
-import { CodeGenerationService } from './CodeGenerationService';
+import { UserService } from './user/UserService';
+import { ApplicationService } from './application/ApplicationService';
+import { StorageService } from './storage/StorageService';
+import { AIService } from './ai/AIService';
+import { CodeGenerationService } from './ai/CodeGenerationService';
 
 // Service instances (singleton pattern)
 export const userService = new UserService();

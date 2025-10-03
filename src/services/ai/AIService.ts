@@ -1,4 +1,4 @@
-import { BaseService } from './BaseService';
+import { BaseService } from '../core/BaseService';
 
 // AI Provider types
 export type AIProvider = 'openai' | 'anthropic' | 'google' | 'cerebras';

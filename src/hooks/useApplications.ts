@@ -5,7 +5,7 @@ import {
   type CreateApplicationData,
   type UpdateApplicationData,
   type ApplicationSearchOptions
-} from '@/services/ApplicationService';
+} from '../services';
 
 // Custom hook for application management
 export function useApplications() {
