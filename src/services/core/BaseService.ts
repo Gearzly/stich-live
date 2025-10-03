@@ -8,8 +8,6 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where, 
-  orderBy, 
   limit, 
   Timestamp,
   QueryConstraint,
@@ -17,7 +15,6 @@ import {
   QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { db } from '@/lib/firebase';
 
 // Base service class for common Firebase operations
 export abstract class BaseService {
@@ -192,7 +189,7 @@ export abstract class BaseService {
       const hasMore = docs.length > pageSize;
       const data = docs.slice(0, pageSize);
       
-      return {
+      const result = {
         data: data.map((doc) => {
           const docData = doc.data();
           return {
@@ -203,8 +200,10 @@ export abstract class BaseService {
           };
         }) as T[],
         hasMore,
-        lastDoc: hasMore ? docs[pageSize - 1] : undefined,
+        ...(hasMore && { lastDoc: docs[pageSize - 1] }),
       };
+      
+      return result;
     } catch (error) {
       this.handleError(error, `paginated query ${collectionName}`);
     }

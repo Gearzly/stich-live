@@ -42,7 +42,6 @@ export interface AIProviderConfig {
 // AI Service for multi-provider integration
 export class AIService extends BaseService {
   private providers: Map<AIProvider, AIProviderConfig> = new Map();
-  private defaultProvider: AIProvider = 'openai';
 
   constructor() {
     super();
@@ -103,10 +102,10 @@ export class AIService extends BaseService {
       });
     }
 
-    // Set default provider to first available
+    // Set default provider to first available (for future use)
     const availableProviders = Array.from(this.providers.keys());
-    if (availableProviders.length > 0) {
-      this.defaultProvider = availableProviders[0];
+    if (availableProviders.length === 0) {
+      console.warn('No AI providers configured');
     }
   }
 
@@ -182,7 +181,11 @@ export class AIService extends BaseService {
     if (!config || !config.models || config.models.length === 0) {
       throw new Error(`No models available for provider: ${provider}`);
     }
-    return config.models[0];
+    const firstModel = config.models[0];
+    if (!firstModel) {
+      throw new Error(`No valid model found for provider: ${provider}`);
+    }
+    return firstModel;
   }
 
   // Calculate estimated cost
@@ -217,7 +220,7 @@ export class AIService extends BaseService {
           throw new Error(`Unsupported provider: ${provider}`);
       }
     } catch (error) {
-      this.handleError(error, 'sendRequest');
+      return this.handleError(error, 'sendRequest') as never;
     }
   }
 

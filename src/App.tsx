@@ -1,21 +1,21 @@
 import { Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from './components/ui/toaster';
 
 // Import contexts
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Import pages
-import HomePage from '@/routes/HomePage';
-import DashboardPage from '@/routes/DashboardPage';
-import LoginPage from '@/routes/LoginPage';
-import RegisterPage from '@/routes/RegisterPage';
-import ProfilePage from '@/routes/ProfilePage';
-import NotFoundPage from '@/routes/NotFoundPage';
+import HomePage from './routes/HomePage';
+import DashboardPage from './routes/DashboardPage';
+import LoginPage from './routes/LoginPage';
+import RegisterPage from './routes/RegisterPage';
+import ProfilePage from './routes/ProfilePage';
+import NotFoundPage from './routes/NotFoundPage';
 
 // Import layout components
-import Layout from '@/components/layout/Layout';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Layout from './components/layout/Layout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 function App() {
   return (
@@ -46,12 +46,7 @@ function App() {
         </Layout>
         
         {/* Global toast notifications */}
-        <Toaster 
-          position="top-right"
-          expand={false}
-          richColors
-          closeButton
-        />
+        <Toaster />
       </AuthProvider>
     </ThemeProvider>
   );

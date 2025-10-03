@@ -7,11 +7,9 @@ import {
   listAll, 
   getMetadata,
   updateMetadata,
-  FullMetadata,
-  UploadTask,
   UploadTaskSnapshot
 } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { storage } from '../../lib/firebase';
 import { BaseService } from '../core/BaseService';
 
 // Storage types
@@ -179,7 +177,7 @@ export class StorageService extends BaseService {
       }
       
       const path = `avatars/${userId}`;
-      return await this.uploadFile(file, path, {
+      const fileInfo = await this.uploadFile(file, path, {
         metadata: {
           contentType: file.type,
           customMetadata: {
@@ -187,6 +185,8 @@ export class StorageService extends BaseService {
           },
         },
       });
+      
+      return fileInfo.downloadURL;
     } catch (error) {
       this.handleError(error, 'uploadAvatar');
     }
@@ -204,7 +204,7 @@ export class StorageService extends BaseService {
       const fileExtension = file.name.split('.').pop();
       const path = `applications/${applicationId}/${assetType}/${timestamp}.${fileExtension}`;
       
-      return await this.uploadFile(file, path, {
+      const fileInfo = await this.uploadFile(file, path, {
         metadata: {
           contentType: file.type,
           customMetadata: {
@@ -214,6 +214,8 @@ export class StorageService extends BaseService {
           },
         },
       });
+      
+      return fileInfo.downloadURL;
     } catch (error) {
       this.handleError(error, 'uploadApplicationAsset');
     }
@@ -236,7 +238,7 @@ export class StorageService extends BaseService {
         downloadURL,
         timeCreated: metadata.timeCreated,
         updated: metadata.updated,
-        customMetadata: metadata.customMetadata,
+        customMetadata: metadata.customMetadata || {},
       };
     } catch (error) {
       if (error instanceof Error && error.message.includes('object-not-found')) {
@@ -268,7 +270,7 @@ export class StorageService extends BaseService {
             downloadURL,
             timeCreated: metadata.timeCreated,
             updated: metadata.updated,
-            customMetadata: metadata.customMetadata,
+            customMetadata: metadata.customMetadata || {},
           });
         } catch (error) {
           console.warn(`Failed to get metadata for ${fileRef.fullPath}:`, error);

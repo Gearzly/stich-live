@@ -1,5 +1,4 @@
 import { 
-  query, 
   where, 
   orderBy, 
   limit as firestoreLimit,

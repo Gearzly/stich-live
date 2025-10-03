@@ -73,7 +73,7 @@ export class UserService extends BaseService {
       const userProfile: Omit<UserProfile, 'id' | 'createdAt' | 'updatedAt'> = {
         email: user.email!,
         displayName: user.displayName || '',
-        photoURL: user.photoURL || undefined,
+        ...(user.photoURL && { photoURL: user.photoURL }),
         bio: '',
         website: '',
         location: '',
@@ -275,7 +275,7 @@ export class UserService extends BaseService {
   }
 
   // Get public user profiles
-  async getPublicProfiles(limitCount = 20): Promise<UserProfile[]> {
+  async getPublicProfiles(_limitCount = 20): Promise<UserProfile[]> {
     try {
       return await this.queryDocuments<UserProfile>(
         this.COLLECTION_NAME,
@@ -286,7 +286,7 @@ export class UserService extends BaseService {
         ]
       );
     } catch (error) {
-      this.handleError(error, 'getPublicProfiles');
+      return this.handleError(error, 'getPublicProfiles') as never;
     }
   }
 

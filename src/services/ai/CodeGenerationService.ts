@@ -1,6 +1,6 @@
 import { BaseService } from '../core/BaseService';
 import { AIService, type AIRequest, type AIResponse } from './AIService';
-import { PromptTemplateService, type PromptTemplate } from './PromptTemplateService';
+import { PromptTemplateService } from './PromptTemplateService';
 
 export interface CodeGenerationRequest {
   template: string;
@@ -83,13 +83,15 @@ export class CodeGenerationService extends BaseService {
       }
 
       // Prepare AI request
+      const provider = request.provider || 'openai';
+      const model = request.model || 'gpt-4o';
       const aiRequest: AIRequest = {
         messages: [
           { role: 'system', content: renderedPrompt.systemPrompt },
           { role: 'user', content: renderedPrompt.userPrompt },
         ],
-        provider: request.provider,
-        model: request.model,
+        provider,
+        model,
         temperature: request.options?.temperature || 0.3, // Lower temperature for code generation
         maxTokens: request.options?.maxTokens || 6000,
       };
@@ -123,8 +125,8 @@ export class CodeGenerationService extends BaseService {
                 { role: 'system', content: testPrompt.systemPrompt },
                 { role: 'user', content: testPrompt.userPrompt },
               ],
-              provider: request.provider,
-              model: request.model,
+              provider,
+              model,
               temperature: 0.3,
               maxTokens: 4000,
             });
@@ -156,8 +158,8 @@ export class CodeGenerationService extends BaseService {
                 { role: 'system', content: docPrompt.systemPrompt },
                 { role: 'user', content: docPrompt.userPrompt },
               ],
-              provider: request.provider,
-              model: request.model,
+              provider,
+              model,
               temperature: 0.4,
               maxTokens: 3000,
             });
@@ -170,11 +172,11 @@ export class CodeGenerationService extends BaseService {
 
       return {
         code: codeResponse.content,
-        tests: testsResponse?.content,
-        documentation: docsResponse?.content,
+        tests: testsResponse?.content || '',
+        documentation: docsResponse?.content || '',
         metadata: {
           template: request.template,
-          framework: request.framework,
+          framework: request.framework || 'react',
           provider: codeResponse.provider,
           model: codeResponse.model,
           tokensUsed: totalTokens,
@@ -446,7 +448,11 @@ export class CodeGenerationService extends BaseService {
       },
     };
 
-    return plans[type];
+    const plan = plans[type];
+    if (!plan) {
+      throw new Error(`No generation plan found for type: ${type}`);
+    }
+    return plan;
   }
 
   // Estimate generation cost
@@ -462,9 +468,10 @@ export class CodeGenerationService extends BaseService {
     const totalTokens = baseTokens + variableTokens + responseTokens;
     
     // Get estimated cost from AI service
+    const provider = request.provider || 'openai';
     const estimation = this.aiService.estimateRequestCost({
       messages: [{ role: 'user', content: 'test' }],
-      provider: request.provider,
+      provider,
       maxTokens: totalTokens,
     });
 
@@ -476,24 +483,24 @@ export class CodeGenerationService extends BaseService {
   }
 
   // Get generation history
-  async getGenerationHistory(userId: string, limit: number = 20): Promise<CodeGenerationResult[]> {
+  async getGenerationHistory(_userId: string, _limit: number = 20): Promise<CodeGenerationResult[]> {
     try {
       // This would typically query the database
       // For now, return empty array as placeholder
       return [];
     } catch (error) {
-      this.handleError(error, 'getGenerationHistory');
+      return this.handleError(error, 'getGenerationHistory') as never;
     }
   }
 
   // Save generation result
-  async saveGenerationResult(userId: string, result: CodeGenerationResult): Promise<string> {
+  async saveGenerationResult(_userId: string, _result: CodeGenerationResult): Promise<string> {
     try {
       // This would typically save to database
       // For now, return a UUID as placeholder
       return crypto.randomUUID();
     } catch (error) {
-      this.handleError(error, 'saveGenerationResult');
+      return this.handleError(error, 'saveGenerationResult') as never;
     }
   }
 }
