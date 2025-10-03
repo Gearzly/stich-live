@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, User, Settings, Moon, Sun, Monitor } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,9 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -84,7 +80,7 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName || 'User'} />
+                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName || 'User'} />
                     <AvatarFallback>
                       {user.displayName ? getInitials(user.displayName) : user.email?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>

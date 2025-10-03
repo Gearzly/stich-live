@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { 
   User,
   signInWithEmailAndPassword,
@@ -22,7 +22,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithGithub: () => Promise<void>;
   logout: () => Promise<void>;
-  updateUserProfile: (displayName: string) => Promise<void>;
+  updateUserProfile: (data: { displayName?: string; photoURL?: string }) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -117,14 +118,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Update user profile
-  const updateUserProfile = async (displayName: string): Promise<void> => {
+  const updateUserProfile = async (data: { displayName?: string; photoURL?: string }): Promise<void> => {
     try {
       if (!user) {
         throw new Error('No user logged in');
       }
-      await updateProfile(user, { displayName });
+      await updateProfile(user, data);
     } catch (error) {
       console.error('Update profile error:', error);
+      throw error;
+    }
+  };
+
+  // Delete user account
+  const deleteAccount = async (): Promise<void> => {
+    try {
+      if (!user) {
+        throw new Error('No user logged in');
+      }
+      await user.delete();
+    } catch (error) {
+      console.error('Delete account error:', error);
       throw error;
     }
   };
@@ -151,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signInWithGithub,
     logout,
     updateUserProfile,
+    deleteAccount,
     sendVerificationEmail,
     isAuthenticated: !!user
   };
