@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// Firebase Storage security rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Default rule: deny all access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    
+    // User profile images
+    match /users/{userId}/profile/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        request.auth.uid == userId &&
+        isValidImage(request.resource) &&
+        request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+    
+    // Generated application files
+    match /apps/{appId}/files/{allPaths=**} {
+      allow read: if request.auth != null && 
+        request.auth.uid == getAppOwner(appId);
+      allow write: if request.auth != null && 
+        request.auth.uid == getAppOwner(appId) &&
+        isValidFile(request.resource);
+    }
+    
+    // Application previews and screenshots
+    match /apps/{appId}/previews/{fileName} {
+      allow read: if request.auth != null && 
+        request.auth.uid == getAppOwner(appId);
+      allow write: if request.auth != null && 
+        request.auth.uid == getAppOwner(appId) &&
+        isValidImage(request.resource);
+    }
+    
+    // Template files (read-only for users, write for admins)
+    match /templates/{templateId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        ('admin' in request.auth.token && request.auth.token.admin == true);
+    }
+    
+    // Temporary uploads
+    match /temp/{userId}/{fileName} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == userId &&
+        isValidTempFile(request.resource);
+      // Auto-delete temp files after 24 hours (handled by Cloud Functions)
+    }
+    
+    // Public assets (readable by all)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+        ('admin' in request.auth.token && request.auth.token.admin == true);
+    }
+    
+    // Helper functions
+    function getAppOwner(appId) {
+      return firestore.get(/databases/(default)/documents/apps/$(appId)).data.userId;
+    }
+    
+    function isValidImage(resource) {
+      return resource.contentType.matches('image/.*') &&
+        resource.contentType in ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] &&
+        resource.size < 10 * 1024 * 1024; // 10MB limit for images
+    }
+    
+    function isValidFile(resource) {
+      return resource.size < 50 * 1024 * 1024 && // 50MB limit for files
+        !resource.contentType.matches('application/x-executable'); // No executables
+    }
+    
+    function isValidTempFile(resource) {
+      return resource.size < 20 * 1024 * 1024 && // 20MB limit for temp files
+        !resource.contentType.matches('application/x-executable'); // No executables
+    }
+  }
+}
