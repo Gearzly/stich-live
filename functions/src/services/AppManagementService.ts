@@ -2,8 +2,6 @@ import { BaseService, NotFoundError, AuthorizationError } from './BaseService';
 import { z } from 'zod';
 import { 
   App, 
-  CreateAppRequest, 
-  UpdateAppRequest, 
   PaginatedResponse,
   AppConfig
 } from '../types/api';

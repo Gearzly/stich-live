@@ -1,15 +1,23 @@
 import { Context } from 'hono';
 import { z } from 'zod';
 import { auth } from 'firebase-admin';
-import { BaseService, ValidationError, AuthenticationError } from '../../services/BaseService';
-import { ApiResponse } from '../../types/api';
+import { getFirestore } from 'firebase-admin/firestore';
+import { BaseService, ValidationError, AuthenticationError, NotFoundError } from '../../services/BaseService';
 import { AuthUser } from '../../middleware/auth';
+import { createSuccessResponse, createErrorResponse } from '../../utils/response';
 
-// Input validation schemas following development rules
+// Input validation schemas
 const registerSchema = z.object({
   email: z.string().email('Invalid email format').transform(val => val.toLowerCase().trim()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   displayName: z.string().min(1, 'Display name is required').max(255, 'Display name too long').optional()
+});
+
+const oauthRegisterSchema = z.object({
+  provider: z.enum(['google', 'github']),
+  idToken: z.string().min(1, 'ID token is required'),
+  displayName: z.string().optional(),
+  photoURL: z.string().url().optional()
 });
 
 const loginSchema = z.object({
@@ -17,8 +25,26 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
+const setCustomClaimsSchema = z.object({
+  uid: z.string().min(1, 'User ID is required'),
+  claims: z.record(z.any()).refine(
+    (claims) => Object.keys(claims).length <= 1000,
+    'Too many custom claims'
+  )
+});
+
+const updateRoleSchema = z.object({
+  uid: z.string().min(1, 'User ID is required'),
+  role: z.enum(['user', 'admin'])
+});
+
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required')
+});
+
+const updateProfileSchema = z.object({
+  displayName: z.string().min(1).max(255).optional(),
+  email: z.string().email().optional()
 });
 
 /**
@@ -26,6 +52,8 @@ const refreshTokenSchema = z.object({
  * Extends BaseService for standardized patterns
  */
 export class AuthenticationService extends BaseService {
+  protected db = getFirestore();
+
   /**
    * Register a new user with Firebase Auth
    */
@@ -33,10 +61,9 @@ export class AuthenticationService extends BaseService {
     try {
       const validatedData = this.validateInput(userData, registerSchema);
 
-      // Create user with Firebase Auth
       const createUserData: any = {
         email: validatedData.email,
-        password: validatedData.password,
+        password: validatedData.password
       };
 
       if (validatedData.displayName) {
@@ -44,6 +71,29 @@ export class AuthenticationService extends BaseService {
       }
 
       const userRecord = await auth().createUser(createUserData);
+
+      // Set default custom claims
+      await auth().setCustomUserClaims(userRecord.uid, { 
+        role: 'user',
+        emailVerified: false 
+      });
+
+      // Create user document in Firestore
+      const userDocData: {
+        email?: string;
+        displayName?: string;
+        photoURL?: string;
+        provider: string;
+      } = {
+        email: validatedData.email,
+        provider: 'email'
+      };
+      
+      if (validatedData.displayName) {
+        userDocData.displayName = validatedData.displayName;
+      }
+      
+      await this.createUserDocument(userRecord.uid, userDocData);
 
       this.logger.info('User registered successfully', { 
         uid: userRecord.uid, 
@@ -56,6 +106,112 @@ export class AuthenticationService extends BaseService {
         throw new ValidationError('Email already exists', 'email', 'EMAIL_EXISTS');
       }
       this.handleError(error as Error, 'register');
+    }
+  }
+
+  /**
+   * Register user via OAuth provider (Google/GitHub)
+   */
+  async registerWithOAuth(oauthData: unknown): Promise<{ uid: string; isNewUser: boolean }> {
+    try {
+      const validatedData = this.validateInput(oauthData, oauthRegisterSchema);
+
+      // Verify the OAuth ID token
+      const decodedToken = await auth().verifyIdToken(validatedData.idToken);
+      
+      let userRecord;
+      let isNewUser = false;
+
+      try {
+        // Check if user already exists
+        userRecord = await auth().getUser(decodedToken.uid);
+      } catch (error) {
+        // User doesn't exist, create new user
+        const createUserData: any = {
+          uid: decodedToken.uid,
+          email: decodedToken.email,
+          emailVerified: true,
+          displayName: validatedData.displayName || decodedToken.name,
+          photoURL: validatedData.photoURL || decodedToken.picture,
+        };
+
+        userRecord = await auth().createUser(createUserData);
+        isNewUser = true;
+
+        // Set default custom claims for new users
+        await auth().setCustomUserClaims(userRecord.uid, { 
+          role: 'user',
+          provider: validatedData.provider,
+          emailVerified: true 
+        });
+
+        // Create user document in Firestore
+        const oauthUserDocData: {
+          email?: string;
+          displayName?: string;
+          photoURL?: string;
+          provider: string;
+        } = {
+          provider: validatedData.provider
+        };
+        
+        if (decodedToken.email) {
+          oauthUserDocData.email = decodedToken.email;
+        }
+        
+        if (createUserData.displayName) {
+          oauthUserDocData.displayName = createUserData.displayName;
+        }
+        
+        if (createUserData.photoURL) {
+          oauthUserDocData.photoURL = createUserData.photoURL;
+        }
+        
+        await this.createUserDocument(userRecord.uid, oauthUserDocData);
+
+        this.logger.info('New OAuth user registered', { 
+          uid: userRecord.uid, 
+          email: decodedToken.email,
+          provider: validatedData.provider
+        });
+      }
+
+      return { uid: userRecord.uid, isNewUser };
+    } catch (error) {
+      this.handleError(error as Error, 'registerWithOAuth');
+    }
+  }
+
+  /**
+   * Get user profile from Firebase Auth
+   */
+  async getProfile(uid: string): Promise<any> {
+    try {
+      if (!uid) {
+        throw new ValidationError('User ID is required', 'uid');
+      }
+
+      const userRecord = await auth().getUser(uid);
+      
+      if (!userRecord) {
+        throw new NotFoundError('User', uid);
+      }
+
+      return {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+        emailVerified: userRecord.emailVerified,
+        disabled: userRecord.disabled,
+        customClaims: userRecord.customClaims,
+        metadata: {
+          creationTime: userRecord.metadata.creationTime,
+          lastSignInTime: userRecord.metadata.lastSignInTime
+        }
+      };
+    } catch (error) {
+      this.handleError(error as Error, 'getProfile');
     }
   }
 
@@ -104,44 +260,19 @@ export class AuthenticationService extends BaseService {
   }
 
   /**
-   * Get user profile from Firebase Auth
-   */
-  async getProfile(uid: string): Promise<any> {
-    try {
-      if (!uid) {
-        throw new ValidationError('User ID is required', 'uid');
-      }
-
-      const userRecord = await auth().getUser(uid);
-
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        displayName: userRecord.displayName,
-        emailVerified: userRecord.emailVerified,
-        createdAt: userRecord.metadata.creationTime,
-        lastSignIn: userRecord.metadata.lastSignInTime,
-      };
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('user-not-found')) {
-        throw new ValidationError('User not found', 'uid', 'USER_NOT_FOUND');
-      }
-      this.handleError(error as Error, 'getProfile');
-    }
-  }
-
-  /**
    * Update user profile in Firebase Auth
    */
-  async updateProfile(uid: string, updateData: { displayName?: string; email?: string }): Promise<{ message: string }> {
+  async updateProfile(uid: string, updateData: unknown): Promise<{ message: string }> {
     try {
       if (!uid) {
         throw new ValidationError('User ID is required', 'uid');
       }
 
+      const validatedData = this.validateInput(updateData, updateProfileSchema);
+
       const updateFields: any = {};
-      if (updateData.displayName) updateFields.displayName = updateData.displayName;
-      if (updateData.email) updateFields.email = updateData.email;
+      if (validatedData.displayName) updateFields.displayName = validatedData.displayName;
+      if (validatedData.email) updateFields.email = validatedData.email;
 
       if (Object.keys(updateFields).length === 0) {
         throw new ValidationError('No update data provided', 'updateData');
@@ -176,6 +307,95 @@ export class AuthenticationService extends BaseService {
       this.handleError(error as Error, 'logout');
     }
   }
+
+  /**
+   * Update user role (admin only)
+   */
+  async updateUserRole(roleData: unknown): Promise<{ message: string }> {
+    try {
+      const validatedData = this.validateInput(roleData, updateRoleSchema);
+
+      // Get current custom claims
+      const userRecord = await auth().getUser(validatedData.uid);
+      const currentClaims = userRecord.customClaims || {};
+
+      // Update role in custom claims
+      const updatedClaims = {
+        ...currentClaims,
+        role: validatedData.role,
+        admin: validatedData.role === 'admin'
+      };
+
+      await auth().setCustomUserClaims(validatedData.uid, updatedClaims);
+
+      this.logger.info('User role updated', { 
+        uid: validatedData.uid, 
+        newRole: validatedData.role 
+      });
+
+      return { message: `User role updated to ${validatedData.role}` };
+    } catch (error) {
+      this.handleError(error as Error, 'updateUserRole');
+    }
+  }
+
+  /**
+   * Set custom claims for a user
+   */
+  async setCustomClaims(uid: string, claims: unknown): Promise<{ message: string }> {
+    try {
+      const validatedData = this.validateInput({ uid, claims }, setCustomClaimsSchema);
+
+      await auth().setCustomUserClaims(validatedData.uid, validatedData.claims);
+
+      this.logger.info('Custom claims set successfully', { 
+        uid: validatedData.uid, 
+        claims: Object.keys(validatedData.claims) 
+      });
+
+      return { message: 'Custom claims updated successfully' };
+    } catch (error) {
+      this.handleError(error as Error, 'setCustomClaims');
+    }
+  }
+
+  /**
+   * Create user document in Firestore
+   */
+  private async createUserDocument(uid: string, userData: {
+    email?: string;
+    displayName?: string;
+    photoURL?: string;
+    provider: string;
+  }): Promise<void> {
+    const userDoc = {
+      email: userData.email,
+      displayName: userData.displayName,
+      photoURL: userData.photoURL,
+      role: 'user',
+      subscriptionTier: 'free',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastLoginAt: new Date(),
+      preferences: {
+        theme: 'system',
+        notifications: true,
+        language: 'en'
+      },
+      usage: {
+        appsCreated: 0,
+        generationsUsed: 0,
+        storageUsed: 0
+      },
+      metadata: {
+        emailVerified: userData.provider !== 'email',
+        provider: userData.provider,
+        firstLoginAt: new Date()
+      }
+    };
+
+    await this.db.collection('users').doc(uid).set(userDoc);
+  }
 }
 
 /**
@@ -194,46 +414,20 @@ export class AuthController {
       const body = await c.req.json();
       const result = await this.authService.register(body);
       
-      const response: ApiResponse<{ uid: string }> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response, 201);
+      return c.json(createSuccessResponse(result), 201);
     } catch (error: any) {
-      return this.handleControllerError(c, error);
+      return this.handleControllerError(c, error, 'register');
     }
   }
 
-  async login(c: Context): Promise<Response> {
+  async registerWithOAuth(c: Context): Promise<Response> {
     try {
       const body = await c.req.json();
-      const result = await this.authService.validateLogin(body);
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response);
+      const result = await this.authService.registerWithOAuth(body);
+      
+      return c.json(createSuccessResponse(result), 201);
     } catch (error: any) {
-      return this.handleControllerError(c, error);
-    }
-  }
-
-  async refreshToken(c: Context): Promise<Response> {
-    try {
-      const body = await c.req.json();
-      const result = await this.authService.refreshToken(body);
-
-      const response: ApiResponse<{ uid: string }> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response);
-    } catch (error: any) {
-      return this.handleControllerError(c, error);
+      return this.handleControllerError(c, error, 'registerWithOAuth');
     }
   }
 
@@ -242,14 +436,31 @@ export class AuthController {
       const user = c.get('user') as AuthUser;
       const result = await this.authService.getProfile(user.uid);
 
-      const response: ApiResponse<any> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response);
+      return c.json(createSuccessResponse(result), 200);
     } catch (error: any) {
-      return this.handleControllerError(c, error);
+      return this.handleControllerError(c, error, 'getProfile');
+    }
+  }
+
+  async login(c: Context): Promise<Response> {
+    try {
+      const body = await c.req.json();
+      const result = await this.authService.validateLogin(body);
+
+      return c.json(createSuccessResponse(result), 200);
+    } catch (error: any) {
+      return this.handleControllerError(c, error, 'login');
+    }
+  }
+
+  async refreshToken(c: Context): Promise<Response> {
+    try {
+      const body = await c.req.json();
+      const result = await this.authService.refreshToken(body);
+
+      return c.json(createSuccessResponse(result), 200);
+    } catch (error: any) {
+      return this.handleControllerError(c, error, 'refreshToken');
     }
   }
 
@@ -259,14 +470,9 @@ export class AuthController {
       const body = await c.req.json();
       const result = await this.authService.updateProfile(user.uid, body);
 
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response);
+      return c.json(createSuccessResponse(result), 200);
     } catch (error: any) {
-      return this.handleControllerError(c, error);
+      return this.handleControllerError(c, error, 'updateProfile');
     }
   }
 
@@ -275,37 +481,50 @@ export class AuthController {
       const user = c.get('user') as AuthUser;
       const result = await this.authService.logout(user.uid);
 
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: result,
-      };
-
-      return c.json(response);
+      return c.json(createSuccessResponse(result), 200);
     } catch (error: any) {
-      return this.handleControllerError(c, error);
+      return this.handleControllerError(c, error, 'logout');
     }
   }
 
-  private handleControllerError(c: Context, error: any): Response {
-    if (error.name === 'APIError') {
-      return c.json({
-        success: false,
-        error: {
-          code: error.code,
-          message: error.message,
-          details: error.details
-        }
-      }, error.statusCode);
+  // Admin-only endpoints
+  async setCustomClaims(c: Context): Promise<Response> {
+    try {
+      const body = await c.req.json();
+      const result = await this.authService.setCustomClaims(body.uid, body.claims);
+
+      return c.json(createSuccessResponse(result), 200);
+    } catch (error: any) {
+      return this.handleControllerError(c, error, 'setCustomClaims');
+    }
+  }
+
+  async updateUserRole(c: Context): Promise<Response> {
+    try {
+      const body = await c.req.json();
+      const result = await this.authService.updateUserRole(body);
+
+      return c.json(createSuccessResponse(result), 200);
+    } catch (error: any) {
+      return this.handleControllerError(c, error, 'updateUserRole');
+    }
+  }
+
+  private handleControllerError(c: Context, error: any, operation: string): Response {
+    console.error(`Error in ${operation}:`, error);
+
+    if (error instanceof ValidationError) {
+      return c.json(createErrorResponse(error.message, 'VALIDATION_ERROR'), 400);
     }
 
-    // Unknown error - log and return generic error
-    console.error('Unexpected controller error:', error);
-    return c.json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Internal server error'
-      }
-    }, 500);
+    if (error instanceof AuthenticationError) {
+      return c.json(createErrorResponse(error.message, 'AUTHENTICATION_ERROR'), 401);
+    }
+
+    if (error instanceof NotFoundError) {
+      return c.json(createErrorResponse(error.message, 'NOT_FOUND'), 404);
+    }
+
+    return c.json(createErrorResponse('Internal server error', 'INTERNAL_ERROR'), 500);
   }
 }

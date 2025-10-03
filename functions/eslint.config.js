@@ -13,6 +13,27 @@ export default [
         sourceType: 'module',
         project: './tsconfig.json',
       },
+      globals: {
+        // Node.js globals
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        global: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+        // Web/Fetch API globals (Hono uses these)
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
+        RequestInit: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        // Firebase/Google Cloud globals
+        gcf: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': typescript,
@@ -25,6 +46,7 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       'no-console': 'off',
+      'no-undef': 'error',
     },
   },
   {

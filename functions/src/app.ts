@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
 import { secureHeaders } from 'hono/secure-headers';
-import { createMiddleware } from 'hono/factory';
 
 // Import route handlers
 import { authRoutes } from './api/auth/routes';
@@ -12,7 +11,6 @@ import { appsRoutes } from './api/apps/routes';
 import { aiRoutes } from './api/ai/routes';
 
 // Import middleware
-import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { rateLimitMiddleware } from './middleware/rate-limit';
 

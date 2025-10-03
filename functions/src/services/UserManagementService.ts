@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BaseService, ValidationError, NotFoundError, AuthorizationError } from './BaseService';
-import { User, CreateUserRequest, UpdateUserRequest, UserPreferences } from '../types/api';
+import { User, UserPreferences } from '../types/api';
 
 // Validation schemas following development rules
 const createUserSchema = z.object({
@@ -16,15 +16,19 @@ const updateUserSchema = z.object({
   role: z.enum(['user', 'admin']).optional()
 });
 
-const userPreferencesSchema = z.object({
-  theme: z.enum(['light', 'dark', 'system']).default('system'),
-  notifications: z.boolean().default(true),
-  language: z.string().min(2).max(5).default('en')
-}).transform((data) => ({
-  theme: data.theme,
-  notifications: data.notifications,
-  language: data.language
-}));
+// User preferences schema (reserved for future implementation)
+// const userPreferencesSchema = z.object({
+//   theme: z.enum(['light', 'dark', 'system']).default('system'),
+//   notifications: z.boolean().default(true),
+//   language: z.string().min(2).max(5).default('en')
+// });
+
+// Transform and validation for user preferences (reserved for future use)
+// const _userPreferencesTransformed = userPreferencesSchema.transform((data) => ({
+//   theme: data.theme,
+//   notifications: data.notifications,
+//   language: data.language
+// }));
 
 /**
  * UserManagementService handles all user-related operations following development rules

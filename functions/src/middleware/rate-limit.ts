@@ -17,7 +17,8 @@ export const rateLimiter = createMiddleware(async (c, next) => {
 
   const clientId = getClientId(c);
   const now = Date.now();
-  const windowStart = now - config.RATE_LIMIT_WINDOW_MS;
+  // Window start time for rate limiting (may be used for cleanup logic)
+  // const _windowStart = now - config.RATE_LIMIT_WINDOW_MS;
 
   try {
     const rateLimitRef = db.collection('rate_limits').doc(clientId);

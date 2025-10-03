@@ -2,7 +2,6 @@ import { BaseService, NotFoundError, AuthorizationError } from './BaseService';
 import { z } from 'zod';
 import { 
   GenerationSession, 
-  GenerateCodeRequest, 
   AIProviderName, 
   PaginatedResponse
 } from '../types/api';
