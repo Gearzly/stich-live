@@ -71,7 +71,9 @@ export function useAuth() {
       if (user) {
         // User is signed in
         const profile = await loadUserProfile(user);
-        const authUser: AuthUser = { ...user, profile: profile || undefined };
+        const authUser: AuthUser = profile 
+          ? { ...user, profile } 
+          : { ...user };
         
         updateAuthState({
           user: authUser,
@@ -157,7 +159,7 @@ export function useAuth() {
       
       // Create user profile
       const profile = await userService.createUserProfile(result.user);
-      const authUser: AuthUser = { ...result.user, profile };
+      const authUser: AuthUser = { ...result.user, profile: profile || undefined };
       
       updateAuthState({
         user: authUser,
