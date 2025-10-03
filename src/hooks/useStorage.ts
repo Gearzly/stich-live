@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { 
   StorageService,
   type UploadProgress,
-  type UploadOptions,
-  type FileMetadata
+  type FileUploadOptions,
+  type FileInfo
 } from '@/services/StorageService';
 
 // Custom hook for file uploads
@@ -11,7 +11,7 @@ export function useFileUpload() {
   const [progress, setProgress] = useState<number>(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<FileMetadata | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<FileInfo | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const storageService = new StorageService();
@@ -20,8 +20,8 @@ export function useFileUpload() {
   const uploadFile = async (
     file: File,
     path: string,
-    options: UploadOptions = {}
-  ): Promise<FileMetadata> => {
+    options: FileUploadOptions = {}
+  ): Promise<FileInfo> => {
     try {
       setUploading(true);
       setError(null);
@@ -31,19 +31,16 @@ export function useFileUpload() {
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController();
 
-      const result = await storageService.uploadFile(
-        file,
-        path,
-        {
-          ...options,
-          onProgress: (progressData: UploadProgress) => {
-            setProgress(progressData.percentage);
-          },
-          signal: abortControllerRef.current.signal,
-        }
-      );
-
-      setUploadedFile(result);
+        const result = await storageService.uploadFile(
+          file,
+          path,
+          {
+            ...options,
+            onProgress: (progressData: UploadProgress) => {
+              setProgress(progressData.progress);
+            },
+          }
+        );      setUploadedFile(result);
       return result;
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -62,9 +59,9 @@ export function useFileUpload() {
   const uploadFiles = async (
     files: File[],
     basePath: string,
-    options: UploadOptions = {}
-  ): Promise<FileMetadata[]> => {
-    const results: FileMetadata[] = [];
+    options: FileUploadOptions = {}
+  ): Promise<FileInfo[]> => {
+    const results: FileInfo[] = [];
     const totalFiles = files.length;
 
     try {
@@ -80,7 +77,7 @@ export function useFileUpload() {
           ...options,
           onProgress: (progressData: UploadProgress) => {
             const overallProgress = ((i / totalFiles) * 100) + 
-              (progressData.percentage / totalFiles);
+              (progressData.progress / totalFiles);
             setProgress(Math.round(overallProgress));
           },
         });
@@ -126,7 +123,7 @@ export function useFileUpload() {
 
 // Custom hook for file management
 export function useFileManager() {
-  const [files, setFiles] = useState<FileMetadata[]>([]);
+  const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,10 +146,10 @@ export function useFileManager() {
   };
 
   // Get file metadata
-  const getFileInfo = async (path: string): Promise<FileMetadata | null> => {
+  const getFileInfo = async (path: string): Promise<FileInfo | null> => {
     try {
       setError(null);
-      const metadata = await storageService.getFileMetadata(path);
+      const metadata = await storageService.getFileInfo(path);
       return metadata;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get file info');
@@ -178,12 +175,13 @@ export function useFileManager() {
   const moveFile = async (oldPath: string, newPath: string) => {
     try {
       setError(null);
-      await storageService.moveFile(oldPath, newPath);
+      await storageService.copyFile(oldPath, newPath);
+      await storageService.deleteFile(oldPath);
       
       // Update local state
       setFiles(prev => prev.map(file => 
-        file.path === oldPath 
-          ? { ...file, path: newPath, name: newPath.split('/').pop() || newPath }
+        file.fullPath === oldPath 
+          ? { ...file, fullPath: newPath, name: newPath.split('/').pop() || newPath }
           : file
       ));
     } catch (err) {
@@ -220,7 +218,7 @@ export function useFileManager() {
 export function useImageUpload() {
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<FileMetadata | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<FileInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const storageService = new StorageService();
@@ -258,12 +256,12 @@ export function useImageUpload() {
       resize?: { width?: number; height?: number; quality?: number };
       generateThumbnail?: boolean;
     } = {}
-  ): Promise<FileMetadata> => {
+  ): Promise<FileInfo> => {
     try {
       setUploading(true);
       setError(null);
 
-      const result = await storageService.uploadImage(file, path, options);
+      const result = await storageService.uploadFile(file, path);
       setUploadedImage(result);
       
       return result;

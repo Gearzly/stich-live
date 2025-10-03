@@ -9,11 +9,9 @@ import {
 } from 'firebase/auth';
 import { 
   doc, 
-  setDoc, 
-  query, 
-  where, 
-  orderBy,
-  Timestamp
+  setDoc,
+  where,
+  orderBy
 } from 'firebase/firestore';
 import { BaseService } from './BaseService';
 

@@ -51,7 +51,7 @@ export function useApplications() {
       
       // Update local state
       setApplications(prev => prev.map(app => 
-        app.id === id ? { ...app, ...data, updatedAt: new Date() } : app
+        app.id === id ? { ...app, ...data, updatedAt: new Date() } as Application : app
       ));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update application');
@@ -240,7 +240,7 @@ export function useApplication(id: string | null) {
       
       // Update local state
       if (application) {
-        setApplication({ ...application, ...data, updatedAt: new Date() });
+        setApplication({ ...application, ...data, updatedAt: new Date() } as Application);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update application');
@@ -257,13 +257,13 @@ export function useApplication(id: string | null) {
       
       // Update local state
       if (application) {
-        setApplication(prev => prev ? {
+        setApplication((prev: Application | null) => prev ? {
           ...prev,
           analytics: {
             ...prev.analytics,
             [metric]: prev.analytics[metric] + 1,
           },
-        } : null);
+        } as Application : null);
       }
     } catch (err) {
       // Don't show error for analytics failures

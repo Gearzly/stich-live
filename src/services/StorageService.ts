@@ -45,12 +45,14 @@ export interface UploadProgress {
 
 // Storage Service
 export class StorageService extends BaseService {
+  private storage = storage;
+
   // Upload file with progress tracking
   async uploadFile(
     file: File,
     path: string,
     options: FileUploadOptions = {}
-  ): Promise<string> {
+  ): Promise<FileInfo> {
     try {
       const userId = this.getCurrentUserId();
       const fileRef = ref(storage, `${userId}/${path}`);
@@ -85,8 +87,21 @@ export class StorageService extends BaseService {
             async () => {
               try {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const metadata = await getMetadata(uploadTask.snapshot.ref);
+                
+                const fileInfo: FileInfo = {
+                  name: metadata.name,
+                  fullPath: metadata.fullPath,
+                  size: metadata.size,
+                  contentType: metadata.contentType || 'application/octet-stream',
+                  downloadURL,
+                  timeCreated: metadata.timeCreated,
+                  updated: metadata.updated,
+                  customMetadata: metadata.customMetadata || {},
+                };
+                
                 options.onComplete?.(downloadURL);
-                resolve(downloadURL);
+                resolve(fileInfo);
               } catch (error) {
                 reject(error);
               }
@@ -96,7 +111,19 @@ export class StorageService extends BaseService {
       } else {
         // Simple upload without progress tracking
         const snapshot = await uploadBytes(fileRef, file, metadata);
-        return await getDownloadURL(snapshot.ref);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        const metadataInfo = await getMetadata(snapshot.ref);
+        
+        return {
+          name: metadataInfo.name,
+          fullPath: metadataInfo.fullPath,
+          size: metadataInfo.size,
+          contentType: metadataInfo.contentType || 'application/octet-stream',
+          downloadURL,
+          timeCreated: metadataInfo.timeCreated,
+          updated: metadataInfo.updated,
+          customMetadata: metadataInfo.customMetadata || {},
+        };
       }
     } catch (error) {
       this.handleError(error, 'uploadFile');
@@ -114,7 +141,7 @@ export class StorageService extends BaseService {
     for (const file of files) {
       try {
         const path = `${basePath}/${file.name}`;
-        const downloadURL = await this.uploadFile(file, path, {
+        const fileInfo = await this.uploadFile(file, path, {
           ...options,
           onProgress: (progress) => {
             // You can customize this to track overall progress
@@ -122,7 +149,7 @@ export class StorageService extends BaseService {
           },
         });
         
-        results.push({ file, downloadURL });
+        results.push({ file, downloadURL: fileInfo.downloadURL });
       } catch (error) {
         results.push({ 
           file, 
@@ -327,6 +354,35 @@ export class StorageService extends BaseService {
       }
       return file.type === type;
     });
+  }
+
+  // Copy file
+  async copyFile(sourcePath: string, destinationPath: string): Promise<void> {
+    try {
+      // Get the source file
+      const sourceRef = ref(this.storage, sourcePath);
+      const downloadURL = await getDownloadURL(sourceRef);
+      
+      // Fetch the file content
+      const response = await fetch(downloadURL);
+      const blob = await response.blob();
+      
+      // Upload to destination
+      const destRef = ref(this.storage, destinationPath);
+      await uploadBytes(destRef, blob);
+    } catch (error) {
+      this.handleError(error, 'copyFile');
+    }
+  }
+
+  // Get download URL
+  async getDownloadURL(path: string): Promise<string> {
+    try {
+      const fileRef = ref(this.storage, path);
+      return await getDownloadURL(fileRef);
+    } catch (error) {
+      this.handleError(error, 'getDownloadURL');
+    }
   }
 
   // Helper: Format file size
