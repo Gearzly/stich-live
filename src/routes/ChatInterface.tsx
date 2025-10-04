@@ -7,30 +7,30 @@ import {
   Sparkles, 
   Code, 
   Eye, 
-  Settings, 
+  // Settings, // Unused
   Download,
   Play,
-  Pause,
-  RotateCcw,
+  // Pause, // Unused
+  // RotateCcw, // Unused
   Save,
   Share2,
   FileText,
   Image,
-  Zap,
-  Brain,
+  // Zap, // Unused
+  // Brain, // Unused
   Loader2,
   CheckCircle,
   AlertCircle,
-  Info
+  // Info // Unused
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
+// import { Card } from '../components/ui/card'; // Unused
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { useAuth } from '../hooks/useAuth';
-import { AIService } from '../services/ai/AIService';
+// import { AIService } from '../services/ai/AIService'; // Unused
 import { ApplicationService, type Application } from '../services/application/ApplicationService';
-import { StorageService } from '../services/storage/StorageService';
+// import { StorageService } from '../services/storage/StorageService'; // Unused
 
 interface ChatMessage {
   id: string;
@@ -67,9 +67,9 @@ const ChatInterface: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const aiService = new AIService();
+  // const aiService = new AIService(); // Unused
   const applicationService = new ApplicationService();
-  const storageService = new StorageService();
+  // const storageService = new StorageService(); // Unused
 
   useEffect(() => {
     scrollToBottom();
@@ -296,7 +296,7 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const simulateCodeGeneration = async (prompt: string, provider: string): Promise<Array<{name: string, content: string, language: string}>> => {
+  const simulateCodeGeneration = async (_prompt: string, _provider: string): Promise<Array<{name: string, content: string, language: string}>> => {
     // Simulate realistic generation delay
     await new Promise(resolve => setTimeout(resolve, 2000));
     

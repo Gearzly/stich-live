@@ -9,7 +9,6 @@ import {
   renderWithProviders, 
   mockFirebase, 
   mockUser, 
-  mockApiResponses,
   setupTest,
   teardownTest,
   clickButton,
@@ -358,7 +357,7 @@ describe('Authentication Components', () => {
       mockFirebase.auth.createUserWithEmailAndPassword.mockResolvedValue({
         user: mockUser
       });
-      mockFetch(mockApiResponses.success);
+      mockFetch({ success: true });
 
       renderWithProviders(<Register />);
       
@@ -440,7 +439,7 @@ describe('Authentication Components', () => {
   mockFirebase.auth.signOut.mockResolvedValue(undefined);
       
       // Simulate logged in state
-      mockFirebase.auth.currentUser = mockUser;
+      (mockFirebase.auth as any).currentUser = mockUser;
       
       renderWithProviders(<Login />);
       

@@ -3,7 +3,7 @@
  * Global test setup, mocks, and environment configuration
  */
 
-import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import matchers from '@testing-library/jest-dom/matchers';
@@ -108,7 +108,7 @@ Object.defineProperty(global, 'performance', {
 });
 
 // Mock HTMLCanvasElement.getContext
-HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+(HTMLCanvasElement.prototype.getContext as any) = vi.fn(() => ({
   fillRect: vi.fn(),
   clearRect: vi.fn(),
   getImageData: vi.fn(() => ({ data: new Array(4) })),
@@ -147,7 +147,7 @@ Object.defineProperty(HTMLVideoElement.prototype, 'pause', {
 });
 
 // Mock FileReader
-global.FileReader = vi.fn().mockImplementation(() => ({
+(global as any).FileReader = vi.fn().mockImplementation(() => ({
   readAsDataURL: vi.fn(),
   readAsText: vi.fn(),
   readAsArrayBuffer: vi.fn(),
@@ -168,7 +168,7 @@ global.FileReader = vi.fn().mockImplementation(() => ({
 
 // Mock Blob
 global.Blob = vi.fn().mockImplementation((content, options) => ({
-  size: content ? content.reduce((acc, chunk) => acc + chunk.length, 0) : 0,
+  size: content ? content.reduce((acc: number, chunk: any) => acc + chunk.length, 0) : 0,
   type: options?.type || '',
   arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
   text: vi.fn().mockResolvedValue(''),
@@ -203,7 +203,7 @@ global.FormData = vi.fn().mockImplementation(() => {
 });
 
 // Mock Worker
-global.Worker = vi.fn().mockImplementation((url) => ({
+(global as any).Worker = vi.fn().mockImplementation((_url: string) => ({
   postMessage: vi.fn(),
   terminate: vi.fn(),
   onmessage: null,
@@ -214,7 +214,7 @@ global.Worker = vi.fn().mockImplementation((url) => ({
 }));
 
 // Mock WebSocket
-global.WebSocket = vi.fn().mockImplementation((url) => ({
+(global as any).WebSocket = vi.fn().mockImplementation((url: string) => ({
   send: vi.fn(),
   close: vi.fn(),
   addEventListener: vi.fn(),
@@ -236,7 +236,7 @@ global.WebSocket = vi.fn().mockImplementation((url) => ({
 }));
 
 // Mock Notification API
-global.Notification = vi.fn().mockImplementation((title, options) => ({
+(global as any).Notification = vi.fn().mockImplementation((title: string, options?: any) => ({
   title,
   body: options?.body || '',
   icon: options?.icon || '',
@@ -263,7 +263,7 @@ Object.defineProperty(Notification, 'requestPermission', {
 });
 
 // Mock requestAnimationFrame
-global.requestAnimationFrame = vi.fn((callback) => setTimeout(callback, 16));
+(global as any).requestAnimationFrame = vi.fn((callback: any) => setTimeout(callback, 16) as any);
 global.cancelAnimationFrame = vi.fn(clearTimeout);
 
 // Mock getComputedStyle

@@ -3,13 +3,12 @@
  * End-to-end tests for API functionality and user workflows
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { 
-  mockFirebase, 
+  // mockFirebase, // Unused in this file
   mockUser, 
-  mockApp, 
+  // mockApp, // Unused in this file
   mockGeneration,
-  mockApiResponses,
   setupTest,
   teardownTest,
   mockFetch,
@@ -38,7 +37,7 @@ describe('API Integration Tests', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetch(mockApiResponses.success);
+    mockFetch({ success: true });
   });
 
   describe('Authentication API', () => {

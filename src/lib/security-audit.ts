@@ -132,8 +132,8 @@ export class SecurityAuditLogger {
       const event: Omit<SecurityEvent, 'id'> = {
         type,
         severity,
-        userId: user?.uid,
-        userEmail: user?.email || undefined,
+        ...(user?.uid && { userId: user.uid }),
+        ...(user?.email && { userEmail: user.email }),
         sessionId: this.getSessionId(),
         ipAddress,
         userAgent,
@@ -311,7 +311,7 @@ export class SecurityAuditLogger {
    * Mark security event as resolved
    */
   async resolveEvent(
-    eventId: string,
+    _eventId: string,
     resolvedBy: string,
     notes?: string
   ): Promise<void> {

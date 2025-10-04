@@ -339,7 +339,7 @@ export const checkRateLimit = (key: string, limit: { windowMs: number; max: numb
 };
 
 // Helper function for rate limiting (simplified)
-const getRequestHistory = (key: string, windowStart: number): number[] => {
+const getRequestHistory = (_key: string, _windowStart: number): number[] => {
   // In production, implement proper storage mechanism
   return [];
 };

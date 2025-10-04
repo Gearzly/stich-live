@@ -6,26 +6,26 @@
 import React, { useState } from 'react';
 import { 
   Shield, 
-  Lock, 
+  // Lock, 
   Key, 
   AlertTriangle, 
   CheckCircle,
   XCircle,
-  Clock,
-  Globe,
+  // Clock,
+  // Globe,
   Smartphone,
   Monitor,
   Eye,
   EyeOff,
   RefreshCw,
   Download,
-  Settings,
+  // Settings,
   Activity,
-  UserCheck,
+  // UserCheck,
   Zap,
   Database,
-  Server,
-  Wifi,
+  // Server,
+  // Wifi,
   Fingerprint
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';

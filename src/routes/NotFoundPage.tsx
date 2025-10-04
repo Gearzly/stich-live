@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // React 17+ with JSX transform doesn't require this
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';

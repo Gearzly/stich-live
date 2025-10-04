@@ -12,3 +12,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Global gtag function for Google Analytics
+declare global {
+  function gtag(...args: any[]): void;
+}

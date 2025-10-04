@@ -7,9 +7,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Cookie, 
   Shield, 
-  Settings, 
+  // Settings, // Unused import
   X, 
-  Check, 
+  // Check, // Unused import
   Info, 
   ExternalLink,
   ChevronDown,
@@ -21,7 +21,7 @@ import { Switch } from '../ui/switch';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
-import { cn } from '../../lib/utils';
+// import { cn } from '../../lib/utils'; // Unused import
 
 interface CookieCategory {
   id: string;
@@ -186,11 +186,11 @@ export const CookieConsentBanner: React.FC = () => {
     }));
     
     // Apply consent preferences
-    if (consent.analytics && typeof gtag !== 'undefined') {
-      gtag('consent', 'update', { analytics_storage: 'granted' });
+    if (consent.analytics && typeof (window as any).gtag !== 'undefined') {
+      (window as any).gtag('consent', 'update', { analytics_storage: 'granted' });
     }
-    if (consent.marketing && typeof gtag !== 'undefined') {
-      gtag('consent', 'update', { ad_storage: 'granted' });
+    if (consent.marketing && typeof (window as any).gtag !== 'undefined') {
+      (window as any).gtag('consent', 'update', { ad_storage: 'granted' });
     }
   };
 

@@ -9,7 +9,6 @@ import {
   mockUser, 
   mockApp, 
   mockGeneration,
-  mockApiResponses,
   setupTest,
   teardownTest,
   mockFetch
@@ -291,7 +290,7 @@ describe('Core Services', () => {
 
     it('starts generation successfully', async () => {
       mockFirebase.firestore.addDoc.mockResolvedValue({ id: 'generation-id' });
-      mockFetch(mockApiResponses.success);
+      mockFetch({ success: true });
       
       const generationService = new GenerationService();
       const request = {
@@ -374,8 +373,8 @@ describe('Core Services', () => {
       const result = await generationService.getGeneration('generation-id');
 
       expect(result).toEqual({
-        id: 'generation-id',
-        ...mockGeneration
+        ...mockGeneration,
+        id: 'generation-id'
       });
     });
 
@@ -514,7 +513,7 @@ describe('Core Services', () => {
       });
       
       const chatService = new ChatService();
-      const result = await chatService.sendMessage('chat-id', 'Hello', 'user');
+      await chatService.sendMessage('chat-id', 'Hello', 'user');
 
       expect(mockFirebase.firestore.addDoc).toHaveBeenCalledWith(
         expect.anything(),

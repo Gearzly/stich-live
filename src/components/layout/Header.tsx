@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // React 17+ with JSX transform doesn't require this
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/AuthContext';

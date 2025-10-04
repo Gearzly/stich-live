@@ -3,7 +3,7 @@
  * Complete user journey tests using Playwright
  */
 
-import { test, expect, Page, Browser } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Test configuration
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
@@ -260,7 +260,7 @@ test.describe('User Authentication Flow', () => {
     await expect(loginPage.isVisible()).resolves.toBe(true);
   });
 
-  test('handles invalid login credentials', async ({ page }) => {
+  test('handles invalid login credentials', async ({ page: _page }) => {
     await loginPage.goto();
     await loginPage.login('invalid@example.com', 'wrongpassword');
 
@@ -372,7 +372,7 @@ test.describe('App Gallery and Discovery', () => {
     await page.waitForURL('**/dashboard');
   });
 
-  test('user can browse app gallery', async ({ page }) => {
+  test('user can browse app gallery', async ({ page: _page }) => {
     await appGalleryPage.goto();
 
     // Should see app cards
@@ -412,7 +412,7 @@ test.describe('App Gallery and Discovery', () => {
     await expect(page.locator('[data-testid="like-count"]').first()).toBeVisible();
   });
 
-  test('user can view app details', async ({ page }) => {
+  test('user can view app details', async ({ page: _page }) => {
     await appGalleryPage.goto();
 
     // Open first app
@@ -597,7 +597,7 @@ test.describe('Security Tests', () => {
     expect(page.locator('text=xss')).not.toBeVisible();
   });
 
-  test('validates CSRF protection', async ({ page, context }) => {
+  test('validates CSRF protection', async ({ page, context: _context }) => {
     // This would test CSRF token validation in a real implementation
     const loginPage = new LoginPage(page);
     
@@ -606,7 +606,7 @@ test.describe('Security Tests', () => {
 
     // Should have CSRF tokens in requests
     const requests: any[] = [];
-    page.on('request', request => requests.push(request));
+    page.on('request', (request: any) => requests.push(request));
 
     await page.click('[data-testid="create-app-button"]');
 

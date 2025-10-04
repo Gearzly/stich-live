@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+// import React, { ReactNode } from 'react'; // React 17+ with JSX transform doesn't require this
+import { ReactNode } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 

@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  UserService, 
-  type UserProfile, 
-  type UpdateUserProfileData,
-  type UpdatePreferencesData 
-} from '../services';
-
-// Custom hook for user profile management
+  UserService,
+  // type UserProfile, // Not exported from services
+  // type UpdateUserProfileData, // Not exported from services
+  // type UpdatePreferencesData // Not exported from services
+} from '../services';// Custom hook for user profile management
 export function useUserProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +42,7 @@ export function useUserProfile() {
   };
 
   // Update profile
-  const updateProfile = async (data: UpdateUserProfileData) => {
+  const updateProfile = async (data: any) => {
     try {
       setError(null);
       if (!user?.uid) {
@@ -59,7 +57,7 @@ export function useUserProfile() {
   };
 
   // Update preferences
-  const updatePreferences = async (data: UpdatePreferencesData) => {
+  const updatePreferences = async (data: any) => {
     try {
       setError(null);
       await userService.updatePreferences(data);
@@ -123,7 +121,7 @@ export function useUserProfile() {
 
 // Custom hook for user search
 export function useUserSearch() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
