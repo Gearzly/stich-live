@@ -16,6 +16,7 @@ import { ErrorBoundary } from './components/error/ErrorBoundary';
 // Lazy-loaded pages for code splitting
 const HomePage = lazy(() => import('./routes/HomePage'));
 const DashboardPage = lazy(() => import('./routes/DashboardPage'));
+const ChatPage = lazy(() => import('./routes/ChatPage'));
 const LoginPage = lazy(() => import('./routes/LoginPage'));
 const RegisterPage = lazy(() => import('./routes/RegisterPage'));
 const ProfilePage = lazy(() => import('./routes/ProfilePage'));
@@ -57,6 +58,8 @@ function App() {
                         <Route path="/register" element={<RegisterPage />} />
                         <Route path="/search" element={<SearchPage />} />
                         <Route path="/discovery" element={<DiscoveryPage />} />
+                        <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/chat/:chatId" element={<ChatPage />} />
                         <Route path="/webcontainer-test" element={<WebContainerTest />} />
                         <Route path="/realtime-test" element={<RealtimeGeneration />} />
                         

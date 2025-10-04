@@ -5,3 +5,19 @@
 [debug] [2025-10-04T08:33:48.582Z] Running auto auth
 [debug] [2025-10-04T08:33:48.589Z] No OAuth tokens found
 [debug] [2025-10-04T08:33:48.590Z] [Firebase Plugin] No user found (this may be normal)
+[debug] [2025-10-04T09:19:34.604Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-10-04T09:19:36.758Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-10-04T09:19:36.760Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-04T09:19:36.773Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-10-04T09:19:46.413Z] Running auto auth
+[debug] [2025-10-04T09:19:46.421Z] No OAuth tokens found
+[debug] [2025-10-04T09:19:46.424Z] [Firebase Plugin] No user found (this may be normal)
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[debug] [2025-10-04T11:29:43.121Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2025-10-04T11:29:58.137Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-10-04T11:29:58.140Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-04T11:29:58.156Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-10-04T11:30:06.052Z] Running auto auth
+[debug] [2025-10-04T11:30:06.057Z] No OAuth tokens found
+[debug] [2025-10-04T11:30:06.058Z] [Firebase Plugin] No user found (this may be normal)
