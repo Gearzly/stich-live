@@ -3,7 +3,7 @@
  * Handles CRUD operations for generated applications
  */
 
-import * as express from 'express';
+import express from 'express';
 import { logger } from 'firebase-functions';
 import { db } from '../config';
 import { verifyToken, AuthenticatedRequest } from '../middleware/auth';

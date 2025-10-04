@@ -3,7 +3,9 @@
  * Comprehensive analytics and monitoring interface for admin users
  */
 
-import React, { useState, useEffect } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
+// import { useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -33,9 +35,9 @@ import {
   Shield,
   Download,
   RefreshCw,
-  Calendar,
-  Filter,
-  Eye,
+  // Calendar,
+  // Filter,
+  // Eye,
   Code
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';

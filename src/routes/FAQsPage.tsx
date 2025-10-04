@@ -3,14 +3,15 @@
  * Frequently Asked Questions with search and categories
  */
 
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, ChevronDown, ChevronUp, MessageCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { useNotifications } from '../contexts/NotificationContext';
-import { cn } from '../lib/utils';
+// import { cn } from '../lib/utils';
 
 interface FAQ {
   id: string;
@@ -148,7 +149,7 @@ export default function FAQsPage() {
     setExpandedItems(newExpanded);
   };
 
-  const handleFeedback = (faqId: string, helpful: boolean) => {
+  const handleFeedback = (_faqId: string, helpful: boolean) => {
     showSuccess(
       'Thank you!', 
       helpful ? 'Glad this was helpful!' : 'We\'ll work on improving this answer.'

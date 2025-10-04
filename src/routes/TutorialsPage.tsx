@@ -3,12 +3,13 @@
  * Step-by-step guides and learning resources
  */
 
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Play, 
-  BookOpen, 
-  Code, 
-  Zap, 
+  // BookOpen, 
+  // Code, 
+  // Zap, 
   Clock, 
   User, 
   CheckCircle,

@@ -190,37 +190,37 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
  * Cleanup Old Generations
  * Runs daily to clean up old generation data
  */
-export const cleanupGenerations = onSchedule({
-  schedule: 'every day 02:00',
-  timeZone: 'UTC',
-}, async () => {
-  const { cleanupOldGenerations } = await import('./services/cleanup/generations');
-  return cleanupOldGenerations();
-});
+// export const cleanupGenerations = onSchedule({
+//   schedule: 'every day 02:00',
+//   timeZone: 'UTC',
+// }, async () => {
+//   const { cleanupOldGenerations } = await import('./services/cleanup/generations');
+//   return cleanupOldGenerations();
+// });
 
 /**
  * Update Analytics
  * Runs hourly to update analytics data
  */
-export const updateAnalytics = onSchedule({
-  schedule: 'every hour',
-  timeZone: 'UTC',
-}, async () => {
-  const { updateHourlyAnalytics } = await import('./services/analytics/aggregation');
-  return updateHourlyAnalytics();
-});
+// export const updateAnalytics = onSchedule({
+//   schedule: 'every hour',
+//   timeZone: 'UTC',
+// }, async () => {
+//   const { updateHourlyAnalytics } = await import('./services/analytics/aggregation');
+//   return updateHourlyAnalytics();
+// });
 
 /**
  * Health Check
  * Runs every 5 minutes to monitor system health
  */
-export const healthCheck = onSchedule({
-  schedule: 'every 5 minutes',
-  timeZone: 'UTC',
-}, async () => {
-  const { performHealthCheck } = await import('./services/monitoring/health');
-  return performHealthCheck();
-});
+// export const healthCheck = onSchedule({
+//   schedule: 'every 5 minutes',
+//   timeZone: 'UTC',
+// }, async () => {
+//   const { performHealthCheck } = await import('./services/monitoring/health');
+//   return performHealthCheck();
+// });
 
 // ==========================================
 // Storage Triggers
@@ -232,19 +232,19 @@ import { onObjectFinalized, onObjectDeleted } from 'firebase-functions/v2/storag
  * File Upload Trigger
  * Runs when a file is uploaded to Storage
  */
-export const onFileUploaded = onObjectFinalized(async (event) => {
-  const { processUploadedFile } = await import('./services/storage/processing');
-  return processUploadedFile(event);
-});
+// export const onFileUploaded = onObjectFinalized(async (event) => {
+//   const { processUploadedFile } = await import('./services/storage/processing');
+//   return processUploadedFile(event);
+// });
 
 /**
  * File Deletion Trigger
  * Runs when a file is deleted from Storage
  */
-export const onFileDeleted = onObjectDeleted(async (event) => {
-  const { cleanupFileReferences } = await import('./services/storage/cleanup');
-  return cleanupFileReferences(event);
-});
+// export const onFileDeleted = onObjectDeleted(async (event) => {
+//   const { cleanupFileReferences } = await import('./services/storage/cleanup');
+//   return cleanupFileReferences(event);
+// });
 
 // ==========================================
 // Pub/Sub Functions
@@ -256,57 +256,57 @@ import { onMessagePublished } from 'firebase-functions/v2/pubsub';
  * Generation Queue Processor
  * Processes AI generation requests from the queue
  */
-export const processGenerationQueue = onMessagePublished({
-  topic: 'generation-queue',
-  maxInstances: 5,
-  memory: '2GiB',
-  timeoutSeconds: 540,
-}, async (event) => {
-  const { processGenerationMessage } = await import('./services/queue/generation');
-  return processGenerationMessage(event);
-});
+// export const processGenerationQueue = onMessagePublished({
+//   topic: 'generation-queue',
+//   maxInstances: 5,
+//   memory: '2GiB',
+//   timeoutSeconds: 540,
+// }, async (event) => {
+//   const { processGenerationMessage } = await import('./services/queue/generation');
+//   return processGenerationMessage(event);
+// });
 
 /**
  * Deployment Queue Processor
  * Processes application deployment requests
  */
-export const processDeploymentQueue = onMessagePublished({
-  topic: 'deployment-queue',
-  maxInstances: 3,
-  memory: '1GiB',
-  timeoutSeconds: 300,
-}, async (event) => {
-  const { processDeploymentMessage } = await import('./services/queue/deployment');
-  return processDeploymentMessage(event);
-});
+// export const processDeploymentQueue = onMessagePublished({
+//   topic: 'deployment-queue',
+//   maxInstances: 3,
+//   memory: '1GiB',
+//   timeoutSeconds: 300,
+// }, async (event) => {
+//   const { processDeploymentMessage } = await import('./services/queue/deployment');
+//   return processDeploymentMessage(event);
+// });
 
 // ==========================================
 // Remote Config Functions
 // ==========================================
 
-import { onConfigUpdated } from 'firebase-functions/v2/remoteconfig';
+// import { onConfigUpdated } from 'firebase-functions/v2/remoteconfig';
 
 /**
  * Remote Config Update Trigger
  * Runs when Remote Config is updated
  */
-export const onRemoteConfigUpdated = onConfigUpdated(async () => {
-  const { syncRemoteConfig } = await import('./services/config/sync');
-  return syncRemoteConfig();
-});
+// export const onRemoteConfigUpdated = onConfigUpdated(async () => {
+//   const { syncRemoteConfig } = await import('./services/config/sync');
+//   return syncRemoteConfig();
+// });
 
 // Export types for client use
-export type { 
-  GenerateAppRequest, 
-  GenerateAppResponse 
-} from './types/ai';
+// export type { 
+//   GenerateAppRequest, 
+//   GenerateAppResponse 
+// } from './types/ai';
 
-export type { 
-  DeployAppRequest, 
-  DeployAppResponse 
-} from './types/deployment';
+// export type { 
+//   DeployAppRequest, 
+//   DeployAppResponse 
+// } from './types/deployment';
 
-export type { 
-  ProcessFileRequest, 
-  ProcessFileResponse 
-} from './types/files';
+// export type { 
+//   ProcessFileRequest, 
+//   ProcessFileResponse 
+// } from './types/files';

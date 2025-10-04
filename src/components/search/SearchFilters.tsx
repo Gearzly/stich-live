@@ -3,7 +3,7 @@
  * Reusable filtering interface for search functionality
  */
 
-import React from 'react';
+// import React from 'react';
 import { X, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -23,7 +23,7 @@ interface SearchFiltersComponentProps {
 }
 
 export function SearchFiltersComponent({
-  filters,
+  filters: _filters,
   tempFilters,
   onFiltersChange,
   onApplyFilters,

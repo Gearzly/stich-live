@@ -23,11 +23,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 
 // Base feedback component
 interface FeedbackProps {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<any>;
   title: string;
   description: string;
   actions?: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
   variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
 }
 
@@ -82,7 +82,7 @@ export function EmptyState({
       title={title}
       description={description}
       actions={action}
-      className={className}
+      {...(className && { className })}
     />
   );
 }
@@ -108,7 +108,7 @@ export function SearchEmptyState({
           </Button>
         )
       }
-      className={className}
+      {...(className && { className })}
     />
   );
 }
@@ -135,7 +135,7 @@ export function NoFilesState({
           </Button>
         )
       }
-      className={className}
+      {...(className && { className })}
     />
   );
 }

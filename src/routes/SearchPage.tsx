@@ -89,7 +89,7 @@ export default function SearchPage() {
     navigate(result.url);
   };
 
-  const handleLikeResult = (resultId: string) => {
+  const handleLikeResult = (_resultId: string) => {
     // TODO: Implement like functionality
     showSuccess('Liked!', 'Added to your favorites');
   };

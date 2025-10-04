@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import * as express from 'express';
+import express from 'express';
 import { logger } from 'firebase-functions';
 import { auth, db } from '../config';
 import { corsMiddleware, securityMiddleware, loggingMiddleware } from '../middleware/common';

@@ -3,8 +3,8 @@
  * Compact search component for navigation header
  */
 
-import React from 'react';
-import { Search } from 'lucide-react';
+// import React from 'react';
+// import { Search } from 'lucide-react';
 import { GlobalSearch } from './GlobalSearch';
 
 interface QuickSearchBarProps {
