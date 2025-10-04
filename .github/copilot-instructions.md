@@ -153,24 +153,25 @@ export const api = onRequest(honoToFirebase(app));
 ```
 
 ### Controller Patterns
-All controllers follow Firebase Functions patterns with error handling:
+All controllers follow Hono patterns with Firebase Functions and error handling:
 
 ```typescript
 export class AuthController {
-  static async login(req: Request, res: Response): Promise<void> {
+  static async login(c: Context): Promise<Response> {
     try {
       // Validation
-      const body = validateRequestBody(req.body, loginSchema);
+      const body = await c.req.json();
+      const validatedData = loginSchema.parse(body);
       
       // Business logic
       const authService = new AuthService();
-      const result = await authService.authenticateUser(body);
+      const result = await authService.authenticateUser(validatedData);
       
       // Response
-      res.status(200).json({ success: true, data: result });
+      return c.json(createSuccessResponse(result), 200);
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ success: false, error: 'Authentication failed' });
+      logger.error('Login error:', error);
+      return c.json(createErrorResponse('AUTH_ERROR', 'Authentication failed'), 500);
     }
   }
 }
@@ -282,34 +283,37 @@ const routes = [
 
 ### Security Headers & CORS
 ```typescript
-// Security configuration for Firebase Functions
-import cors from 'cors';
-import helmet from 'helmet';
+// Security configuration for Firebase Functions with Hono
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
-const app = express();
-app.use(cors({ origin: process.env.FRONTEND_URL }));
-app.use(helmet());
+const app = new Hono();
+app.use('*', cors({ 
+  origin: process.env.FRONTEND_URL,
+  credentials: true
+}));
 ```
 
 ## Error Handling
 
 ### Standardized Error Responses
 ```typescript
-// Firebase Functions error handling
+// Firebase Functions error handling with Hono
+import { Context } from 'hono';
+
 export class BaseController {
-  protected static handleError(error: unknown, operation: string, res: Response): void {
+  protected static handleError(error: unknown, operation: string, c: Context): Response {
     console.error(`Error in ${operation}:`, error);
     
     if (error instanceof ValidationError) {
-      res.status(400).json({ success: false, error: error.message });
-      return;
+      return c.json({ success: false, error: error.message }, 400);
     }
     
-    res.status(500).json({ success: false, error: 'Internal server error' });
+    return c.json({ success: false, error: 'Internal server error' }, 500);
   }
 }
 
-// Frontend error handling with Firebase
+// Frontend error handling with Firebase and Hono backend
 try {
   const response = await fetch('/api/apps', {
     method: 'POST',
@@ -319,6 +323,11 @@ try {
     },
     body: JSON.stringify(appData)
   });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Request failed');
+  }
 } catch (error) {
   console.error('API error:', error);
   toast.error('An unexpected error occurred');
