@@ -10,7 +10,8 @@ import {
   PanelRight,
   Layers,
   Clock,
-  Bug
+  Bug,
+  Github
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import type { Blueprint } from '@/components/blueprint';
 import { PhaseTimeline, createMockPhases } from '@/components/phase';
 import type { GenerationPhase } from '@/components/phase';
 import { DebugPanel } from '@/components/debug';
+import { GitHubExport } from '@/components/github';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -356,7 +358,7 @@ Please generate the complete code structure including all necessary files, confi
             className="border-l bg-muted/30"
           >
             <Tabs defaultValue="files" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-4 mx-4 mt-4">
+              <TabsList className="grid w-full grid-cols-5 mx-4 mt-4">
                 <TabsTrigger value="files" className="text-sm">Files</TabsTrigger>
                 <TabsTrigger value="blueprint" className="text-sm">
                   <Layers className="w-4 h-4 mr-1" />
@@ -369,6 +371,10 @@ Please generate the complete code structure including all necessary files, confi
                 <TabsTrigger value="debug" className="text-sm">
                   <Bug className="w-4 h-4 mr-1" />
                   Debug
+                </TabsTrigger>
+                <TabsTrigger value="github" className="text-sm">
+                  <Github className="w-4 h-4 mr-1" />
+                  GitHub
                 </TabsTrigger>
               </TabsList>
               
@@ -407,6 +413,22 @@ Please generate the complete code structure including all necessary files, confi
                   isActive={true}
                   {...(session?.id && { sessionId: session.id })}
                   className="h-full"
+                />
+              </TabsContent>
+              
+              <TabsContent value="github" className="flex-1 m-0 p-4">
+                <GitHubExport
+                  files={convertToEnhancedFileNodes(session?.files || [])}
+                  projectName={session?.title || 'my-project'}
+                  className="h-full"
+                  onExportComplete={(repo) => {
+                    console.log('Export completed:', repo);
+                    // Could show a toast notification here
+                  }}
+                  onExportError={(error) => {
+                    console.error('Export error:', error);
+                    // Could show an error toast here
+                  }}
                 />
               </TabsContent>
             </Tabs>
