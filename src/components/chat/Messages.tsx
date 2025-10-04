@@ -21,9 +21,11 @@ export const UserMessage = memo(({ content, timestamp, className }: MessageProps
           <User className="w-4 h-4 text-primary" />
         </div>
         <div className="bg-primary text-primary-foreground rounded-lg rounded-tr-none px-4 py-3">
-          <ReactMarkdown className="prose prose-sm prose-invert max-w-none">
-            {content}
-          </ReactMarkdown>
+          <div className="prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown>
+              {content}
+            </ReactMarkdown>
+          </div>
         </div>
       </div>
     </div>
@@ -68,9 +70,11 @@ export const AIMessage = memo(({
           )}
         </div>
         <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3 relative">
-          <ReactMarkdown className="prose prose-sm max-w-none">
-            {content}
-          </ReactMarkdown>
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown>
+              {content}
+            </ReactMarkdown>
+          </div>
           {isStreaming && (
             <div className="absolute bottom-2 right-2">
               <div className="flex space-x-1">

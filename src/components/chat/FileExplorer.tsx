@@ -217,11 +217,11 @@ function FileTreeNode({
               key={child.id}
               node={child}
               level={level + 1}
-              onFileSelect={onFileSelect || undefined}
-              onFileEdit={onFileEdit || undefined}
-              onFileDownload={onFileDownload || undefined}
-              onFileDelete={onFileDelete || undefined}
-              selectedFileId={selectedFileId}
+              {...(onFileSelect && { onFileSelect })}
+              {...(onFileEdit && { onFileEdit })}
+              {...(onFileDownload && { onFileDownload })}
+              {...(onFileDelete && { onFileDelete })}
+              {...(selectedFileId && { selectedFileId })}
               expandedFolders={expandedFolders}
               onToggleFolder={onToggleFolder}
             />
@@ -301,11 +301,11 @@ export function FileExplorer({
             key={file.id}
             node={file}
             level={0}
-            onFileSelect={onFileSelect || undefined}
-            onFileEdit={onFileEdit || undefined}
-            onFileDownload={onFileDownload || undefined}
-            onFileDelete={onFileDelete || undefined}
-            selectedFileId={selectedFileId}
+            {...(onFileSelect && { onFileSelect })}
+            {...(onFileEdit && { onFileEdit })}
+            {...(onFileDownload && { onFileDownload })}
+            {...(onFileDelete && { onFileDelete })}
+            {...(selectedFileId && { selectedFileId })}
             expandedFolders={expandedFolders}
             onToggleFolder={handleToggleFolder}
           />

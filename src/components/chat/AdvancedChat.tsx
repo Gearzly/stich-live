@@ -7,16 +7,20 @@ import {
   Maximize2,
   Minimize2,
   PanelLeft,
-  PanelRight
+  PanelRight,
+  Layers
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { UserMessage, AIMessage, SystemMessage } from './Messages';
 import { ChatInput } from './ChatInput';
 import { FileExplorer, FileNode } from './FileExplorer';
+import { BlueprintIntegration } from '@/components/blueprint';
+import type { Blueprint } from '@/components/blueprint';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -97,6 +101,44 @@ export default function AdvancedChat({ className }: ChatPageProps) {
     a.download = `chat-${session.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Blueprint handlers
+  const handleBlueprintGenerate = (blueprint: Blueprint) => {
+    console.log('Blueprint generated:', blueprint);
+    // Optionally send a message to the chat about the blueprint
+    handleSendMessage(`I've created a blueprint for "${blueprint.title}" with ${blueprint.nodes.length} components. Let me generate the code based on this architecture.`);
+  };
+
+  const handleCodeGenerate = (blueprint: Blueprint) => {
+    console.log('Generating code from blueprint:', blueprint);
+    // Convert blueprint to a structured prompt for code generation
+    const prompt = `Generate a complete application based on this blueprint:
+
+Title: ${blueprint.title}
+Description: ${blueprint.description || 'No description provided'}
+
+Components:
+${blueprint.nodes.map(node => `- ${node.title} (${node.type}): ${node.description || 'No description'}
+  Technologies: ${node.technologies?.join(', ') || 'Not specified'}`).join('\n')}
+
+Connections:
+${blueprint.connections.map(conn => {
+  const source = blueprint.nodes.find(n => n.id === conn.sourceId);
+  const target = blueprint.nodes.find(n => n.id === conn.targetId);
+  return `- ${source?.title} → ${target?.title} (${conn.type}${conn.label ? `: ${conn.label}` : ''})`;
+}).join('\n')}
+
+Please generate the complete code structure including all necessary files, configurations, and documentation.`;
+
+    handleSendMessage(prompt);
+  };
+
+  const handleBlueprintShare = (blueprint: Blueprint) => {
+    console.log('Sharing blueprint:', blueprint);
+    // Copy blueprint link or data to clipboard
+    navigator.clipboard.writeText(JSON.stringify(blueprint, null, 2));
+    // Could also trigger a toast notification here
   };
 
   if (!user) {
@@ -285,23 +327,44 @@ export default function AdvancedChat({ className }: ChatPageProps) {
         />
       </div>
 
-      {/* File Explorer Sidebar */}
+      {/* Right Sidebar - Files & Blueprints */}
       <AnimatePresence>
         {showFileExplorer && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 300, opacity: 1 }}
+            animate={{ width: 350, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="border-l bg-muted/30"
           >
-            <FileExplorer
-              files={session?.files || []}
-              onFileSelect={handleFileSelect}
-              onFileDownload={handleFileDownload}
-              {...(selectedFile?.id && { selectedFileId: selectedFile.id })}
-              className="h-full"
-            />
+            <Tabs defaultValue="files" className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
+                <TabsTrigger value="files" className="text-sm">Files</TabsTrigger>
+                <TabsTrigger value="blueprint" className="text-sm">
+                  <Layers className="w-4 h-4 mr-1" />
+                  Blueprint
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="files" className="flex-1 m-0">
+                <FileExplorer
+                  files={session?.files || []}
+                  onFileSelect={handleFileSelect}
+                  onFileDownload={handleFileDownload}
+                  {...(selectedFile?.id && { selectedFileId: selectedFile.id })}
+                  className="h-full"
+                />
+              </TabsContent>
+              
+              <TabsContent value="blueprint" className="flex-1 m-0">
+                <BlueprintIntegration
+                  onBlueprintGenerate={handleBlueprintGenerate}
+                  onCodeGenerate={handleCodeGenerate}
+                  onBlueprintShare={handleBlueprintShare}
+                  className="h-full"
+                />
+              </TabsContent>
+            </Tabs>
           </motion.div>
         )}
       </AnimatePresence>
