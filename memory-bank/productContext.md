@@ -28,7 +28,7 @@ An AI-powered platform that transforms natural language descriptions into fully 
 
 ## Architecture
 
-Full-stack TypeScript application with React 19.1.1 frontend deployed on Vercel and Firebase backend including Functions, Firestore, Auth, Storage, and Real-time Database. Uses Firebase Functions with Express.js/Hono.js framework for serverless backend API, Firebase Auth for authentication, Firestore for NoSQL database operations, Firebase Storage for file management, and Firebase Real-time Database for live updates during AI code generation.
+Full-stack TypeScript application with React 19.1.1 frontend deployed on Vercel and Firebase backend including Functions, Firestore, Auth, Storage, and Real-time Database. Uses Firebase Functions with Hono.js framework for serverless backend API, Firebase Auth for authentication, Firestore for NoSQL database operations, Firebase Storage for file management, and Firebase Real-time Database for live updates during AI code generation.
 
 
 
@@ -49,7 +49,6 @@ Full-stack TypeScript application with React 19.1.1 frontend hosted on Vercel an
 - React 19.1.1
 - Vite
 - Tailwind CSS
-- Express.js
 - Hono.js
 - OpenAI API
 - Anthropic API
@@ -79,7 +78,6 @@ Full-stack TypeScript application with React 19.1.1 frontend hosted on Vercel an
 - TypeScript
 - Firebase SDK v10
 - Firebase Functions
-- Express.js
 - Hono.js
 - Tailwind CSS
 - shadcn/ui
@@ -104,7 +102,7 @@ Full-stack TypeScript application with React 19.1.1 frontend hosted on Vercel an
 - TypeScript
 - Firebase SDK
 - Firebase Functions
-- Express.js/Hono.js
+- Hono.js
 - Tailwind CSS
 - shadcn/ui
 - React Router

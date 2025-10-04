@@ -19,7 +19,7 @@ Serverless Edge Computing pattern using Vercel for frontend hosting and Firebase
 ### Examples
 
 - Vercel deployment for React frontend with automatic CDN distribution
-- Firebase Functions for API endpoints with Express.js/Hono.js framework
+- Firebase Functions for API endpoints with Hono.js framework
 - Auto-scaling based on traffic with pay-per-use pricing model
 
 

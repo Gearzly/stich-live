@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
+import { authRoutes } from './auth/routes';
 import { corsMiddleware } from '../middleware/hono-cors';
 
 export const createAuthApp = () => {
   const app = new Hono();
   app.use('*', corsMiddleware);
   
-  app.get('/health', (c) => {
-    return c.json({ success: true, service: 'auth', status: 'healthy' });
-  });
+  // Mount auth routes
+  app.route('/', authRoutes);
   
   return app;
 };

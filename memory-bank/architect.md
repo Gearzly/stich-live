@@ -17,7 +17,7 @@ This file contains the architectural decisions and design patterns for the Memor
 - Use Firebase as primary backend platform
 - Implement TypeScript strict mode across entire codebase
 - Use React 19.1.1 with modern hooks and function components
-- Adopt Firebase Functions with Express.js/Hono.js for API layer
+- Adopt Firebase Functions with Hono.js for API layer
 - Use Firestore for primary database with real-time listeners
 - Implement Firebase Auth for authentication and authorization
 - Use Firebase Storage for file management and CDN
@@ -153,7 +153,7 @@ React 19.1.1 frontend application hosted on Vercel with Vite build system, TypeS
 
 ### Firebase Functions API
 
-Serverless backend API using Firebase Functions with Express.js/Hono.js framework
+Serverless backend API using Firebase Functions with Hono.js framework
 
 **Responsibilities:**
 

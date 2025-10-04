@@ -21,11 +21,27 @@ setGlobalOptions({
 // Import route handlers
 import { createAuthApp } from './api/auth';
 import { createAIApp } from './api/ai';
+import { createAppsApp } from './api/apps';
+import { createUsersApp } from './api/users';
+import { createFilesApp } from './api/files';
+import { createAnalyticsApp } from './api/analytics';
+import { createMainApp } from './app';
 import { honoToFirebase } from './utils/firebase-adapter';
 
 // ==========================================
 // HTTP Functions (REST API)
 // ==========================================
+
+/**
+ * Main API entry point
+ * Handles all API routes through a single function
+ */
+export const api = onRequest({
+  cors: true,
+  maxInstances: 50,
+  memory: '1GiB',
+  timeoutSeconds: 540,
+}, honoToFirebase(createMainApp()));
 
 /**
  * Authentication API
@@ -47,7 +63,42 @@ export const ai = onRequest({
   timeoutSeconds: 540,
 }, honoToFirebase(createAIApp()));
 
-// ==========================================
+/**
+ * Applications API
+ * Handles CRUD operations for generated applications
+ */
+export const apps = onRequest({
+  cors: true,
+  maxInstances: 30,
+}, honoToFirebase(createAppsApp() as any));
+
+/**
+ * Users API
+ * Handles user profiles, preferences, and account management
+ */
+export const users = onRequest({
+  cors: true,
+  maxInstances: 30,
+}, honoToFirebase(createUsersApp() as any));
+
+/**
+ * Files API
+ * Handles file uploads, downloads, and storage operations
+ */
+export const files = onRequest({
+  cors: true,
+  maxInstances: 20,
+  memory: '1GiB',
+}, honoToFirebase(createFilesApp() as any));
+
+/**
+ * Analytics API
+ * Handles usage tracking, metrics, and analytics
+ */
+export const analytics = onRequest({
+  cors: true,
+  maxInstances: 10,
+}, honoToFirebase(createAnalyticsApp() as any));
 // Callable Functions (Direct Client Calls)
 // ==========================================
 

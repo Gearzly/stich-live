@@ -37,7 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.health = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.ai = exports.auth = void 0;
+exports.health = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.analytics = exports.files = exports.users = exports.apps = exports.ai = exports.auth = exports.api = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const admin = __importStar(require("firebase-admin"));
@@ -53,10 +53,25 @@ admin.initializeApp();
 // Import route handlers
 const auth_1 = require("./api/auth");
 const ai_1 = require("./api/ai");
+const apps_1 = require("./api/apps");
+const users_1 = require("./api/users");
+const files_1 = require("./api/files");
+const analytics_1 = require("./api/analytics");
+const app_1 = require("./app");
 const firebase_adapter_1 = require("./utils/firebase-adapter");
 // ==========================================
 // HTTP Functions (REST API)
 // ==========================================
+/**
+ * Main API entry point
+ * Handles all API routes through a single function
+ */
+exports.api = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 50,
+    memory: '1GiB',
+    timeoutSeconds: 540,
+}, (0, firebase_adapter_1.honoToFirebase)((0, app_1.createMainApp)()));
 /**
  * Authentication API
  * Handles login, registration, password reset, OAuth
@@ -75,7 +90,39 @@ exports.ai = (0, https_1.onRequest)({
     memory: '1GiB',
     timeoutSeconds: 540,
 }, (0, firebase_adapter_1.honoToFirebase)((0, ai_1.createAIApp)()));
-// ==========================================
+/**
+ * Applications API
+ * Handles CRUD operations for generated applications
+ */
+exports.apps = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 30,
+}, (0, firebase_adapter_1.honoToFirebase)((0, apps_1.createAppsApp)()));
+/**
+ * Users API
+ * Handles user profiles, preferences, and account management
+ */
+exports.users = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 30,
+}, (0, firebase_adapter_1.honoToFirebase)((0, users_1.createUsersApp)()));
+/**
+ * Files API
+ * Handles file uploads, downloads, and storage operations
+ */
+exports.files = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 20,
+    memory: '1GiB',
+}, (0, firebase_adapter_1.honoToFirebase)((0, files_1.createFilesApp)()));
+/**
+ * Analytics API
+ * Handles usage tracking, metrics, and analytics
+ */
+exports.analytics = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 10,
+}, (0, firebase_adapter_1.honoToFirebase)((0, analytics_1.createAnalyticsApp)()));
 // Callable Functions (Direct Client Calls)
 // ==========================================
 // Import and export callable functions

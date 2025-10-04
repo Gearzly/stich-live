@@ -1,1 +1,0 @@
-{"version":3,"file":"firebase.d.ts","sourceRoot":"","sources":["../../src/config/firebase.ts"],"names":[],"mappings":"AAKA,eAAO,MAAM,IAAI,oCAAY,CAAC;AAC9B,eAAO,MAAM,EAAE,6BAAiB,CAAC;AACjC,eAAO,MAAM,OAAO,0CAAe,CAAC;AAGpC,eAAO,MAAM,WAAW;;;;;;;;CAQd,CAAC;AAGX,eAAO,MAAM,aAAa,GAAI,gBAAgB,MAAM,0GAEnD,CAAC;AAEF,eAAO,MAAM,WAAW,GAAI,gBAAgB,MAAM,EAAE,YAAY,MAAM,wGAErE,CAAC"}

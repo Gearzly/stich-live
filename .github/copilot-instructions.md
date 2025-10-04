@@ -6,7 +6,7 @@
 
 ### Key Architecture Components
 - **Frontend**: React 19.1.1 + Vite + TypeScript with modern UI components (Vercel)
-- **Backend**: Firebase Functions with Express.js/Hono.js framework  
+- **Backend**: Firebase Functions with Hono.js framework  
 - **Database**: Firebase Firestore (NoSQL) with strong typing
 - **Real-time**: Firebase Realtime Database for live updates
 - **AI Integration**: Multi-provider support (OpenAI, Anthropic, Google AI, Cerebras)
@@ -129,8 +129,8 @@ export class UserService extends BaseService {
 
 ## API Architecture
 
-### Firebase Functions + Express/Hono.js Patterns
-All API routes use **Express.js** or **Hono.js** in Firebase Functions:
+### Hono.js Patterns
+All API routes use **Hono.js** in Firebase Functions:
 
 ```typescript
 // Firebase Functions setup pattern
@@ -149,7 +149,7 @@ app.get('/profile', authMiddleware, async (c) => {
   // Profile logic
 });
 
-export const api = onRequest(app.fetch);
+export const api = onRequest(honoToFirebase(app));
 ```
 
 ### Controller Patterns
@@ -186,21 +186,22 @@ export class AuthController {
 
 ### Authentication Middleware
 ```typescript
-// Firebase Auth middleware for Functions
+// Firebase Auth middleware for Hono
+import { Context } from 'hono';
 import { auth } from 'firebase-admin';
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (c: Context, next: () => Promise<void>) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const token = c.req.header('authorization')?.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      return c.json({ error: 'No token provided' }, 401);
     }
     
     const decodedToken = await auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
+    c.set('user', decodedToken);
+    await next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    return c.json({ error: 'Invalid token' }, 401);
   }
 };
 ```

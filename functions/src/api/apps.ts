@@ -3,395 +3,167 @@
  * Handles CRUD operations for generated applications
  */
 
-import express from 'express';
+import { Hono } from 'hono';
 import { logger } from 'firebase-functions';
-import { db } from '../config';
-import { verifyToken, AuthenticatedRequest } from '../middleware/auth';
-import { corsMiddleware, securityMiddleware, loggingMiddleware } from '../middleware/common';
+import { authMiddleware, AuthUser } from '../middleware/hono-auth';
+import { corsMiddleware } from '../middleware/hono-cors';
+import { AppManagementService, CreateApplicationData } from '../services/AppManagementService';
+import { createSuccessResponse, createErrorResponse } from '../utils/response';
+import { z } from 'zod';
+
+// Extended Hono context for user data
+interface AppContext {
+  Variables: {
+    user: AuthUser;
+  };
+}
+
+// Validation schemas
+const CreateAppSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().min(1).max(1000),
+  category: z.string().min(1),
+  framework: z.enum(['react', 'vue', 'svelte', 'vanilla', 'node', 'python', 'other']),
+  tags: z.array(z.string()).optional(),
+  isPublic: z.boolean().optional(),
+  generationSettings: z.object({
+    aiProvider: z.enum(['openai', 'anthropic', 'google', 'cerebras']),
+    model: z.string(),
+    prompt: z.string().min(1),
+    additionalInstructions: z.string().optional(),
+  }),
+});
 
 export const createAppsApp = () => {
-  const app = express();
+  const app = new Hono<AppContext>();
+  const appService = new AppManagementService();
   
   // Apply middleware
-  app.use(corsMiddleware);
-  app.use(securityMiddleware);
-  app.use(loggingMiddleware);
-  app.use(express.json({ limit: '50mb' }));
+  app.use('*', corsMiddleware);
 
   /**
-   * GET /apps
+   * Health check endpoint
+   */
+  app.get('/health', (c) => {
+    return c.json({
+      success: true,
+      service: 'apps',
+      status: 'healthy',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  /**
+   * GET /
    * Get all applications for the authenticated user
    */
-  app.get('/', verifyToken, async (req: AuthenticatedRequest, res) => {
+  app.get('/', authMiddleware, async (c) => {
     try {
-      const userId = req.userId!;
-      const { limit = 20, offset = 0, status, search } = req.query;
+      const user = c.get('user');
+      const query = c.req.query();
       
-      let query = db.collection('applications')
-        .where('createdBy', '==', userId)
-        .orderBy('createdAt', 'desc');
+      const filters = {
+        status: query.status,
+        framework: query.framework,
+        category: query.category,
+        isPublic: query.isPublic === 'true',
+        isFavorite: query.isFavorite === 'true',
+        search: query.search,
+        tags: query.tags ? query.tags.split(',') : undefined,
+      };
+
+      const limit = parseInt(query.limit || '20');
+      const offset = parseInt(query.offset || '0');
       
-      // Add filters
-      if (status) {
-        query = query.where('status', '==', status);
-      }
+      const result = await appService.getUserApplications(user.uid, filters, limit, offset);
       
-      const snapshot = await query
-        .limit(Number(limit))
-        .offset(Number(offset))
-        .get();
-      
-      let apps = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
-      
-      // Apply search filter if provided
-      if (search) {
-        const searchTerm = String(search).toLowerCase();
-        apps = apps.filter((app: any) => 
-          app.name?.toLowerCase().includes(searchTerm) ||
-          app.description?.toLowerCase().includes(searchTerm)
-        );
-      }
-      
-      res.json({
-        success: true,
-        data: {
-          applications: apps,
-          total: apps.length,
-          hasMore: snapshot.docs.length === Number(limit)
-        }
-      });
-      
+      return c.json(createSuccessResponse(result));
     } catch (error) {
-      logger.error('Error fetching applications:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch applications'
-      });
+      logger.error('Failed to get user applications:', error);
+      return c.json(createErrorResponse('APPS_ERROR', 'Failed to get applications'), 500);
     }
   });
 
   /**
-   * GET /apps/:id
-   * Get a specific application by ID
-   */
-  app.get('/:id', verifyToken, async (req: AuthenticatedRequest, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.userId!;
-      
-      const doc = await db.collection('applications').doc(id).get();
-      
-      if (!doc.exists) {
-        res.status(404).json({
-          success: false,
-          error: 'Application not found'
-        });
-        return;
-      }
-      
-      const app = { id: doc.id, ...doc.data() } as any;
-      
-      // Check ownership or public access
-      if (app.createdBy !== userId && !app.isPublic) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-        return;
-      }
-      
-      res.json({
-        success: true,
-        data: app
-      });
-      
-    } catch (error) {
-      logger.error('Error fetching application:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch application'
-      });
-    }
-  });
-
-  /**
-   * POST /apps
+   * POST /
    * Create a new application
    */
-  app.post('/', verifyToken, async (req: AuthenticatedRequest, res) => {
+  app.post('/', authMiddleware, async (c) => {
     try {
-      const userId = req.userId!;
-      const { name, description, category, framework, tags = [], isPublic = false } = req.body;
+      const user = c.get('user');
+      const body = await c.req.json();
       
-      // Validation
-      if (!name || !category || !framework) {
-        res.status(400).json({
-          success: false,
-          error: 'Name, category, and framework are required'
-        });
-        return;
-      }
+      const validatedData = CreateAppSchema.parse(body);
       
-      const appData = {
-        name,
-        description: description || '',
-        category,
-        framework,
-        tags,
-        isPublic,
-        status: 'generating',
-        createdBy: userId,
-        updatedBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        analytics: {
-          views: 0,
-          likes: 0,
-          forks: 0,
-          shares: 0
-        }
-      };
+      // Cast validated data to service interface
+      const app = await appService.createApplication(user.uid, validatedData as CreateApplicationData);
       
-      const docRef = await db.collection('applications').add(appData);
-      
-      res.status(201).json({
-        success: true,
-        data: {
-          id: docRef.id,
-          ...appData
-        }
-      });
-      
+      return c.json(createSuccessResponse(app), 201);
     } catch (error) {
-      logger.error('Error creating application:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create application'
-      });
+      if (error instanceof z.ZodError) {
+        return c.json(createErrorResponse('VALIDATION_ERROR', 'Validation failed', error.errors), 400);
+      }
+      logger.error('Failed to create application:', error);
+      return c.json(createErrorResponse('CREATE_ERROR', 'Failed to create application'), 500);
     }
   });
 
   /**
-   * PUT /apps/:id
-   * Update an existing application
+   * GET /:id
+   * Get a specific application by ID
    */
-  app.put('/:id', verifyToken, async (req: AuthenticatedRequest, res) => {
+  app.get('/:id', authMiddleware, async (c) => {
     try {
-      const { id } = req.params;
-      const userId = req.userId!;
-      const updates = req.body;
+      const user = c.get('user');
+      const appId = c.req.param('id');
       
-      // Get existing document
-      const doc = await db.collection('applications').doc(id).get();
+      const app = await appService.getApplicationById(appId, user.uid);
       
-      if (!doc.exists) {
-        res.status(404).json({
-          success: false,
-          error: 'Application not found'
-        });
-        return;
+      if (!app) {
+        return c.json(createErrorResponse('NOT_FOUND', 'Application not found'), 404);
       }
       
-      const app = doc.data();
-      
-      // Check ownership
-      if (app?.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-        return;
-      }
-      
-      // Prepare update data
-      const updateData = {
-        ...updates,
-        updatedBy: userId,
-        updatedAt: new Date()
-      };
-      
-      // Remove fields that shouldn't be updated
-      delete updateData.id;
-      delete updateData.createdBy;
-      delete updateData.createdAt;
-      
-      await db.collection('applications').doc(id).update(updateData);
-      
-      res.json({
-        success: true,
-        data: {
-          id,
-          ...app,
-          ...updateData
-        }
-      });
-      
+      return c.json(createSuccessResponse(app));
     } catch (error) {
-      logger.error('Error updating application:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update application'
-      });
+      logger.error('Failed to get application:', error);
+      return c.json(createErrorResponse('APPS_ERROR', 'Failed to get application'), 500);
     }
   });
 
   /**
-   * DELETE /apps/:id
-   * Delete an application
+   * PUT /:id
+   * Update a specific application
    */
-  app.delete('/:id', verifyToken, async (req: AuthenticatedRequest, res) => {
+  app.put('/:id', authMiddleware, async (c) => {
     try {
-      const { id } = req.params;
-      const userId = req.userId!;
+      const user = c.get('user');
+      const appId = c.req.param('id');
+      const body = await c.req.json();
       
-      // Get existing document
-      const doc = await db.collection('applications').doc(id).get();
+      await appService.updateApplication(appId, user.uid, body);
       
-      if (!doc.exists) {
-        res.status(404).json({
-          success: false,
-          error: 'Application not found'
-        });
-        return;
-      }
-      
-      const app = doc.data();
-      
-      // Check ownership
-      if (app?.createdBy !== userId) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied'
-        });
-        return;
-      }
-      
-      await db.collection('applications').doc(id).delete();
-      
-      res.json({
-        success: true,
-        message: 'Application deleted successfully'
-      });
-      
+      return c.json(createSuccessResponse({ message: 'Application updated successfully' }));
     } catch (error) {
-      logger.error('Error deleting application:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to delete application'
-      });
+      logger.error('Failed to update application:', error);
+      return c.json(createErrorResponse('UPDATE_ERROR', 'Failed to update application'), 500);
     }
   });
 
   /**
-   * GET /apps/public
-   * Get public applications for the gallery
+   * DELETE /:id
+   * Delete a specific application
    */
-  app.get('/public/gallery', async (req, res) => {
+  app.delete('/:id', authMiddleware, async (c) => {
     try {
-      const { limit = 20, offset = 0, category, framework, search, sort = 'featured' } = req.query;
+      const user = c.get('user');
+      const appId = c.req.param('id');
       
-      let query = db.collection('applications')
-        .where('isPublic', '==', true)
-        .where('status', '==', 'deployed');
+      await appService.deleteApplication(appId, user.uid);
       
-      // Add filters
-      if (category && category !== 'all') {
-        query = query.where('category', '==', category);
-      }
-      
-      if (framework && framework !== 'all') {
-        query = query.where('framework', '==', framework);
-      }
-      
-      // Apply sorting
-      switch (sort) {
-        case 'newest':
-          query = query.orderBy('createdAt', 'desc');
-          break;
-        case 'popular':
-          query = query.orderBy('analytics.views', 'desc');
-          break;
-        case 'trending':
-          query = query.orderBy('analytics.likes', 'desc');
-          break;
-        default:
-          query = query.orderBy('isFavorite', 'desc').orderBy('analytics.views', 'desc');
-      }
-      
-      const snapshot = await query
-        .limit(Number(limit))
-        .offset(Number(offset))
-        .get();
-      
-      let apps = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as any[];
-      
-      // Apply search filter if provided
-      if (search) {
-        const searchTerm = String(search).toLowerCase();
-        apps = apps.filter((app: any) => 
-          app.name?.toLowerCase().includes(searchTerm) ||
-          app.description?.toLowerCase().includes(searchTerm) ||
-          app.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm))
-        );
-      }
-      
-      res.json({
-        success: true,
-        data: {
-          applications: apps,
-          total: apps.length,
-          hasMore: snapshot.docs.length === Number(limit)
-        }
-      });
-      
+      return c.json(createSuccessResponse({ message: 'Application deleted successfully' }));
     } catch (error) {
-      logger.error('Error fetching public applications:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to fetch public applications'
-      });
-    }
-  });
-
-  /**
-   * POST /apps/:id/like
-   * Like/unlike an application
-   */
-  app.post('/:id/like', verifyToken, async (req: AuthenticatedRequest, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.userId!;
-      
-      const doc = await db.collection('applications').doc(id).get();
-      
-      if (!doc.exists) {
-        res.status(404).json({
-          success: false,
-          error: 'Application not found'
-        });
-        return;
-      }
-      
-      // TODO: Implement like/unlike logic with proper user tracking
-      // This would typically use a subcollection or separate likes collection
-      
-      res.json({
-        success: true,
-        message: 'Like status updated'
-      });
-      
-    } catch (error) {
-      logger.error('Error updating like status:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update like status'
-      });
+      logger.error('Failed to delete application:', error);
+      return c.json(createErrorResponse('DELETE_ERROR', 'Failed to delete application'), 500);
     }
   });
 
