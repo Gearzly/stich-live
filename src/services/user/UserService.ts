@@ -300,4 +300,68 @@ export class UserService extends BaseService {
       return false;
     }
   }
+
+  // Create or update user profile
+  async createOrUpdateUser(userData: {
+    id: string;
+    email: string;
+    displayName: string;
+    photoURL?: string;
+    subscription?: 'free' | 'pro' | 'enterprise';
+    phone?: string;
+    company?: string;
+    jobTitle?: string;
+    socialLinks?: {
+      github?: string;
+      twitter?: string;
+      linkedin?: string;
+    };
+    createdAt: Date;
+    updatedAt: Date;
+  }): Promise<UserProfile> {
+    try {
+      const profile: UserProfile = {
+        id: userData.id,
+        email: userData.email,
+        displayName: userData.displayName,
+        photoURL: userData.photoURL,
+        bio: '',
+        website: '',
+        location: '',
+        isEmailVerified: false,
+        lastLoginAt: new Date(),
+        createdAt: userData.createdAt,
+        updatedAt: userData.updatedAt,
+        preferences: {
+          theme: 'system',
+          notifications: {
+            email: true,
+            push: true,
+            security: true,
+            marketing: false
+          },
+          privacy: {
+            profileVisibility: 'public',
+            showEmail: false,
+            showLocation: false
+          }
+        }
+      };
+
+      await setDoc(doc(this.db, 'users', userData.id), profile);
+      return profile;
+    } catch (error) {
+      this.handleError(error, 'create/update user');
+    }
+  }
+
+  // Delete user and their data
+  async deleteUser(userId: string): Promise<void> {
+    try {
+      // Delete user profile from Firestore
+      await this.deleteDocument('users', userId);
+    } catch (error) {
+      this.handleError(error, 'delete user');
+    }
+  }
 }
