@@ -37,7 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ai = exports.auth = void 0;
+exports.health = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.ai = exports.auth = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const admin = __importStar(require("firebase-admin"));
@@ -54,14 +54,6 @@ admin.initializeApp();
 const auth_1 = require("./api/auth");
 const ai_1 = require("./api/ai");
 const firebase_adapter_1 = require("./utils/firebase-adapter");
-// Import callable functions
-// import { generateApplication } from './services/ai/generation';
-// import { deployApplication } from './services/deployment/deploy';
-// import { processFileUpload } from './services/storage/files';
-// Import Firestore triggers
-// import { onApplicationCreated, onApplicationUpdated } from './triggers/applications';
-// import { onUserCreated, onUserUpdated } from './triggers/users';
-// import { onGenerationUpdated } from './triggers/generations';
 // ==========================================
 // HTTP Functions (REST API)
 // ==========================================
@@ -83,55 +75,35 @@ exports.ai = (0, https_1.onRequest)({
     memory: '1GiB',
     timeoutSeconds: 540,
 }, (0, firebase_adapter_1.honoToFirebase)((0, ai_1.createAIApp)()));
-/**
- * Generation Queue Processor
- * Processes AI generation requests from the queue
- */
-// export const processGenerationQueue = onMessagePublished({
-//   topic: 'generation-queue',
-//   maxInstances: 5,
-//   memory: '2GiB',
-//   timeoutSeconds: 540,
-// }, async (event) => {
-//   const { processGenerationMessage } = await import('./services/queue/generation');
-//   return processGenerationMessage(event);
-// });
-/**
- * Deployment Queue Processor
- * Processes application deployment requests
- */
-// export const processDeploymentQueue = onMessagePublished({
-//   topic: 'deployment-queue',
-//   maxInstances: 3,
-//   memory: '1GiB',
-//   timeoutSeconds: 300,
-// }, async (event) => {
-//   const { processDeploymentMessage } = await import('./services/queue/deployment');
-//   return processDeploymentMessage(event);
-// });
 // ==========================================
-// Remote Config Functions
+// Callable Functions (Direct Client Calls)
 // ==========================================
-// import { onConfigUpdated } from 'firebase-functions/v2/remoteconfig';
+// Import and export callable functions
+var callable_1 = require("./callable");
+Object.defineProperty(exports, "generateApp", { enumerable: true, get: function () { return callable_1.generateApp; } });
+Object.defineProperty(exports, "deployApp", { enumerable: true, get: function () { return callable_1.deployApp; } });
+Object.defineProperty(exports, "getGenerationStatus", { enumerable: true, get: function () { return callable_1.getGenerationStatus; } });
+Object.defineProperty(exports, "cancelGeneration", { enumerable: true, get: function () { return callable_1.cancelGeneration; } });
+// ==========================================
+// Health Check Function
+// ==========================================
 /**
- * Remote Config Update Trigger
- * Runs when Remote Config is updated
+ * Health Check Endpoint
+ * Simple health check for monitoring
  */
-// export const onRemoteConfigUpdated = onConfigUpdated(async () => {
-//   const { syncRemoteConfig } = await import('./services/config/sync');
-//   return syncRemoteConfig();
-// });
-// Export types for client use
-// export type { 
-//   GenerateAppRequest, 
-//   GenerateAppResponse 
-// } from './types/ai';
-// export type { 
-//   DeployAppRequest, 
-//   DeployAppResponse 
-// } from './types/deployment';
-// export type { 
-//   ProcessFileRequest, 
-//   ProcessFileResponse 
-// } from './types/files';
+exports.health = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 10,
+}, async (req, res) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        services: {
+            firestore: 'available',
+            storage: 'available',
+            auth: 'available'
+        }
+    });
+});
 //# sourceMappingURL=index.js.map
