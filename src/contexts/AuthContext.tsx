@@ -15,22 +15,8 @@ import {
 import { auth } from '../lib/firebase';
 import { UserService, UserProfile } from '../services/user/UserService';
 
-// Extended User Profile interface to include additional properties expected by the app
-export interface ExtendedUserProfile extends UserProfile {
-  phone?: string;
-  company?: string;
-  jobTitle?: string;
-  subscription?: 'free' | 'pro' | 'enterprise';
-  socialLinks?: {
-    github?: string;
-    twitter?: string;
-    linkedin?: string;
-  };
-}
-
-export interface AuthUser extends FirebaseUser {
-  profile?: ExtendedUserProfile;
-}
+// AuthUser now optionally carries UserProfile directly
+export interface AuthUser extends FirebaseUser { profile?: UserProfile }
 
 export interface LoginCredentials {
   email: string;
@@ -49,7 +35,7 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   hasProfile: boolean;
-  userProfile: ExtendedUserProfile | null;
+  userProfile: UserProfile | null;
   
   // Authentication methods
   signInWithEmail: (credentials: LoginCredentials) => Promise<void>;
@@ -61,7 +47,7 @@ interface AuthContextType {
   deleteAccount: () => Promise<void>;
   
   // Profile methods
-  updateUserProfile: (profileData: Partial<ExtendedUserProfile>) => Promise<void>;
+  updateUserProfile: (profileData: Partial<UserProfile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
   
   // Utility methods
@@ -76,7 +62,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [userProfile, setUserProfile] = useState<ExtendedUserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -86,26 +72,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const loadUserProfile = async (uid: string) => {
     try {
       const profile = await userService.getUserProfile(uid);
-      const extendedProfile = profile ? {
-        ...profile,
-        // Add default values for extended properties
-        phone: '',
-        company: '',
-        jobTitle: '',
-        subscription: 'free' as const,
-        socialLinks: {
-          github: '',
-          twitter: '',
-          linkedin: ''
-        }
-      } : null;
-      
-      setUserProfile(extendedProfile);
-      
-      // Attach profile to user object
-      if (user && extendedProfile) {
-        setUser({ ...user, profile: extendedProfile });
-      }
+      setUserProfile(profile);
+      if (user && profile) setUser({ ...user, profile });
     } catch (error) {
       console.error('Error loading user profile:', error);
       setUserProfile(null);
@@ -256,25 +224,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const updateUserProfile = async (profileData: Partial<ExtendedUserProfile>) => {
+  const updateUserProfile = async (profileData: Partial<UserProfile>) => {
     try {
       setError(null);
       if (!user) throw new Error('No user logged in');
       
       const updatedProfile = await userService.updateUserProfile(user.uid, profileData);
-      const extendedProfile: ExtendedUserProfile = {
-        ...updatedProfile,
-        phone: profileData.phone || '',
-        company: profileData.company || '',
-        jobTitle: profileData.jobTitle || '',
-        subscription: profileData.subscription || 'free',
-        socialLinks: profileData.socialLinks || { github: '', twitter: '', linkedin: '' }
-      };
-      
-      setUserProfile(extendedProfile);
-      
-      // Update user object with new profile
-      setUser({ ...user, profile: extendedProfile });
+      setUserProfile(updatedProfile);
+      setUser({ ...user, profile: updatedProfile });
     } catch (error: any) {
       setError(error.message);
       throw error;

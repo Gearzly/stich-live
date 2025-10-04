@@ -44,7 +44,6 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { useAuth } from '../contexts/AuthContext';
 import { UserService, type UserProfile } from '../services/user/UserService';
-import type { ExtendedUserProfile } from '../contexts/AuthContext';
 import { ApplicationService } from '../services/application/ApplicationService';
 import { toast } from '../lib/toast';
 
@@ -77,7 +76,7 @@ const Profile: React.FC = () => {
   const { user, updateUserProfile } = useAuth();
   const [activeSection, setActiveSection] = useState('general');
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<ExtendedUserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [usageStats, setUsageStats] = useState<UsageStats>({
     totalApps: 0,
     activeApps: 0,
