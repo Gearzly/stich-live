@@ -4,8 +4,13 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { auth } from 'firebase-admin';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+// Augment Express Request type locally (lightweight) for user property if not globally declared
+// This avoids TS errors where req.user?.uid is accessed. In a full project, a global.d.ts should declare this.
+// We keep it local to prevent affecting other modules unexpectedly.
+interface AuthenticatedRequest extends Request {
+  user?: { uid: string } & Record<string, any>;
+}
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Rate limit configuration types
 interface RateLimitConfig {
@@ -26,13 +31,7 @@ interface RateLimitEntry {
   firstRequest: number;
 }
 
-interface UserRateLimit {
-  userId: string;
-  endpoint: string;
-  count: number;
-  windowStart: number;
-  lastRequest: number;
-}
+// interface UserRateLimit kept out for now (reserved for future persistence layer)
 
 // In-memory store for rate limiting (use Redis in production)
 class MemoryStore {
@@ -173,7 +172,7 @@ export class RateLimiter {
 
   // Express middleware
   middleware() {
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       try {
         const key = this.config.keyGenerator(req);
         const entry = await this.store.increment(key, this.config.windowMs);
@@ -216,8 +215,14 @@ export class RateLimiter {
     };
   }
 
-  private defaultKeyGenerator(req: Request): string {
+  private defaultKeyGenerator(req: AuthenticatedRequest): string {
     return req.ip || 'unknown';
+  }
+
+  // Helper for external composed limiters without exposing store
+  async incrementRaw(key: string): Promise<{ count: number; resetTime: number }> {
+    const entry = await (this.store as any).increment(key, this.config.windowMs);
+    return { count: entry.count, resetTime: entry.resetTime };
   }
 
   // Check rate limit without incrementing
@@ -252,7 +257,7 @@ export const rateLimiters = {
   auth: new RateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 5,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       const email = req.body?.email || req.ip;
       return `auth:${email}`;
     },
@@ -263,7 +268,7 @@ export const rateLimiters = {
   passwordReset: new RateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 3,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       const email = req.body?.email || req.ip;
       return `password_reset:${email}`;
     },
@@ -274,7 +279,7 @@ export const rateLimiters = {
   appGeneration: new RateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 10,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       return `app_generation:${req.user?.uid || req.ip}`;
     },
     message: 'Too many app generation requests, please try again later.'
@@ -284,7 +289,7 @@ export const rateLimiters = {
   fileUpload: new RateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 50,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       return `file_upload:${req.user?.uid || req.ip}`;
     },
     message: 'Too many file upload requests, please try again later.'
@@ -294,7 +299,7 @@ export const rateLimiters = {
   chat: new RateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 100,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       return `chat:${req.user?.uid || req.ip}`;
     },
     message: 'Too many chat requests, please try again later.'
@@ -304,7 +309,7 @@ export const rateLimiters = {
   admin: new RateLimiter({
     windowMs: 60 * 60 * 1000, // 1 hour
     maxRequests: 1000,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       return `admin:${req.user?.uid || req.ip}`;
     },
     message: 'Admin rate limit exceeded.'
@@ -315,7 +320,7 @@ export const rateLimiters = {
 export const createUserRateLimiter = (config: RateLimitConfig) => {
   const limiter = new RateLimiter({
     ...config,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       const userId = req.user?.uid;
       if (!userId) {
         throw new Error('Authentication required for user rate limiting');
@@ -331,7 +336,7 @@ export const createUserRateLimiter = (config: RateLimitConfig) => {
 export const createIPRateLimiter = (config: RateLimitConfig) => {
   const limiter = new RateLimiter({
     ...config,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       const ip = req.ip || req.connection.remoteAddress || 'unknown';
       return `ip:${ip}:${req.route?.path || req.path}`;
     }
@@ -348,10 +353,10 @@ export const createCombinedRateLimiter = (
   const userLimiter = new RateLimiter(userConfig);
   const ipLimiter = new RateLimiter(ipConfig);
 
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check IP-based rate limit first
     const ipKey = `ip:${req.ip}:${req.route?.path || req.path}`;
-    const ipEntry = await ipLimiter.store.increment(ipKey, ipConfig.windowMs);
+    const ipEntry = await ipLimiter.incrementRaw(ipKey);
 
     if (ipEntry.count > ipConfig.maxRequests) {
       res.status(429).json({
@@ -364,7 +369,7 @@ export const createCombinedRateLimiter = (
     // Check user-based rate limit if authenticated
     if (req.user?.uid) {
       const userKey = `user:${req.user.uid}:${req.route?.path || req.path}`;
-      const userEntry = await userLimiter.store.increment(userKey, userConfig.windowMs);
+      const userEntry = await userLimiter.incrementRaw(userKey);
 
       if (userEntry.count > userConfig.maxRequests) {
         res.status(429).json({
@@ -420,7 +425,7 @@ export class WebSocketRateLimiter {
 }
 
 // Middleware to add rate limiting headers
-export const addRateLimitHeaders = (req: Request, res: Response, next: NextFunction) => {
+export const addRateLimitHeaders = (_req: Request, res: Response, next: NextFunction) => {
   res.set({
     'X-RateLimit-Policy': 'Standard rate limiting applied',
     'X-RateLimit-Window': '900', // 15 minutes
@@ -433,7 +438,7 @@ export const addRateLimitHeaders = (req: Request, res: Response, next: NextFunct
 export const customRateLimit = (endpoint: string, limits: RateLimitConfig) => {
   const limiter = new RateLimiter({
     ...limits,
-    keyGenerator: (req) => {
+    keyGenerator: (req: AuthenticatedRequest) => {
       const userId = req.user?.uid || req.ip;
       return `${endpoint}:${userId}`;
     }

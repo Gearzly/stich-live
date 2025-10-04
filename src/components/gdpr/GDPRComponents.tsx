@@ -15,13 +15,13 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Switch } from '../components/ui/switch';
-import { Badge } from '../components/ui/badge';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { Separator } from '../components/ui/separator';
-import { cn } from '../lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Switch } from '../ui/switch';
+import { Badge } from '../ui/badge';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Separator } from '../ui/separator';
+import { cn } from '../../lib/utils';
 
 interface CookieCategory {
   id: string;

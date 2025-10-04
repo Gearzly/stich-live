@@ -6,10 +6,12 @@
 import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import matchers from '@testing-library/jest-dom/matchers';
 import { setupTestEnvironment } from '../lib/test-utils';
 
-// Extend Vitest's expect with custom matchers
+// Extend Vitest's expect with testing-library matchers
 import { expect } from 'vitest';
+expect.extend(matchers as any);
 
 // Setup test environment
 beforeAll(() => {

@@ -160,7 +160,7 @@ describe('Authentication Components', () => {
     });
 
     it('handles password reset request', async () => {
-      mockFirebase.auth.sendPasswordResetEmail.mockResolvedValue();
+  mockFirebase.auth.sendPasswordResetEmail.mockResolvedValue(undefined);
 
       renderWithProviders(<Login />);
       
@@ -263,7 +263,7 @@ describe('Authentication Components', () => {
       mockFirebase.auth.createUserWithEmailAndPassword.mockResolvedValue({
         user: mockUser
       });
-      mockFirebase.auth.updateProfile.mockResolvedValue();
+  mockFirebase.auth.updateProfile.mockResolvedValue(undefined);
 
       renderWithProviders(<Register />);
       
@@ -437,7 +437,7 @@ describe('Authentication Components', () => {
     });
 
     it('handles logout correctly', async () => {
-      mockFirebase.auth.signOut.mockResolvedValue();
+  mockFirebase.auth.signOut.mockResolvedValue(undefined);
       
       // Simulate logged in state
       mockFirebase.auth.currentUser = mockUser;

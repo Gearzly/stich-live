@@ -1,37 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  MoreHorizontal,
-  Star,
-  Clock,
-  Users,
-  TrendingUp,
-  Zap,
-  Globe,
-  Settings,
-  Bell,
-  Sparkles,
-  BarChart,
-  Code,
-  Rocket,
-  Eye,
-  Download,
-  Share2,
-  Trash2
-} from 'lucide-react';
+// Import only required icons (prune unused to reduce bundle & TS unused warnings)
+import { Plus, Search, Grid3X3, List, Sparkles, Code, Bell, Rocket, Eye, TrendingUp, BarChart, MoreHorizontal, Clock, Share2, Settings, Globe } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { useAuth } from '../hooks/useAuth';
 import { ApplicationService, type Application } from '../services/application/ApplicationService';
-import { UserService } from '../services/user/UserService';
 
 interface DashboardStats {
   totalApps: number;
@@ -55,7 +32,7 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const applicationService = new ApplicationService();
-  const userService = new UserService();
+  // userService not currently used; remove to avoid unused variable warning
 
   useEffect(() => {
     if (user) {

@@ -69,7 +69,7 @@ describe('Core Services', () => {
     });
 
     it('updates user profile successfully', async () => {
-      mockFirebase.firestore.updateDoc.mockResolvedValue();
+  mockFirebase.firestore.updateDoc.mockResolvedValue(undefined);
       
       const userService = new UserService();
       const updates = {
@@ -120,8 +120,8 @@ describe('Core Services', () => {
     });
 
     it('deletes user successfully', async () => {
-      mockFirebase.firestore.deleteDoc.mockResolvedValue();
-      mockFirebase.auth.deleteUser.mockResolvedValue();
+  mockFirebase.firestore.deleteDoc.mockResolvedValue(undefined);
+  mockFirebase.auth.deleteUser.mockResolvedValue(undefined);
       
       const userService = new UserService();
       await userService.deleteUser('user-id');
@@ -216,7 +216,7 @@ describe('Core Services', () => {
     });
 
     it('updates app successfully', async () => {
-      mockFirebase.firestore.updateDoc.mockResolvedValue();
+  mockFirebase.firestore.updateDoc.mockResolvedValue(undefined);
       
       const appService = new AppService();
       const updates = {
@@ -237,7 +237,7 @@ describe('Core Services', () => {
     });
 
     it('deletes app successfully', async () => {
-      mockFirebase.firestore.deleteDoc.mockResolvedValue();
+  mockFirebase.firestore.deleteDoc.mockResolvedValue(undefined);
       
       const appService = new AppService();
       await appService.deleteApp('app-id');
@@ -308,7 +308,7 @@ describe('Core Services', () => {
     });
 
     it('updates generation progress', async () => {
-      mockFirebase.firestore.updateDoc.mockResolvedValue();
+  mockFirebase.firestore.updateDoc.mockResolvedValue(undefined);
       
       const generationService = new GenerationService();
       await generationService.updateProgress('generation-id', 50, 'Generating components...');
@@ -325,7 +325,7 @@ describe('Core Services', () => {
     });
 
     it('completes generation successfully', async () => {
-      mockFirebase.firestore.updateDoc.mockResolvedValue();
+  mockFirebase.firestore.updateDoc.mockResolvedValue(undefined);
       
       const generationService = new GenerationService();
       const files = [
@@ -346,7 +346,7 @@ describe('Core Services', () => {
     });
 
     it('handles generation failure', async () => {
-      mockFirebase.firestore.updateDoc.mockResolvedValue();
+  mockFirebase.firestore.updateDoc.mockResolvedValue(undefined);
       
       const generationService = new GenerationService();
       const error = 'AI service unavailable';
@@ -457,7 +457,7 @@ describe('Core Services', () => {
     });
 
     it('deletes file successfully', async () => {
-      mockFirebase.storage.deleteObject.mockResolvedValue();
+  mockFirebase.storage.deleteObject.mockResolvedValue(undefined);
       
       const fileService = new FileService();
       await fileService.deleteFile('uploads/test.txt');
@@ -548,7 +548,7 @@ describe('Core Services', () => {
     });
 
     it('deletes chat successfully', async () => {
-      mockFirebase.firestore.deleteDoc.mockResolvedValue();
+  mockFirebase.firestore.deleteDoc.mockResolvedValue(undefined);
       
       const chatService = new ChatService();
       await chatService.deleteChat('chat-id');

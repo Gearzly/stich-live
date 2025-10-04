@@ -1,0 +1,7 @@
+[debug] [2025-10-04T08:33:27.928Z] [Firebase Plugin] Activating Firebase extension.
+[debug] [2025-10-04T08:33:33.562Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-10-04T08:33:33.563Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-10-04T08:33:33.582Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[debug] [2025-10-04T08:33:48.582Z] Running auto auth
+[debug] [2025-10-04T08:33:48.589Z] No OAuth tokens found
+[debug] [2025-10-04T08:33:48.590Z] [Firebase Plugin] No user found (this may be normal)

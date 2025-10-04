@@ -24,6 +24,16 @@ export interface UserProfile {
   bio?: string;
   website?: string;
   location?: string;
+  // Newly added optional extended profile fields
+  phone?: string;
+  company?: string;
+  jobTitle?: string;
+  subscription?: 'free' | 'pro' | 'enterprise';
+  socialLinks?: {
+    github?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
   isEmailVerified: boolean;
   lastLoginAt: Date;
   createdAt: Date;
@@ -50,6 +60,15 @@ export interface UpdateUserProfileData {
   bio?: string;
   website?: string;
   location?: string;
+  phone?: string;
+  company?: string;
+  jobTitle?: string;
+  subscription?: 'free' | 'pro' | 'enterprise';
+  socialLinks?: {
+    github?: string;
+    twitter?: string;
+    linkedin?: string;
+  };
 }
 
 export interface UpdatePreferencesData {
@@ -77,6 +96,15 @@ export class UserService extends BaseService {
         bio: '',
         website: '',
         location: '',
+        phone: '',
+        company: '',
+        jobTitle: '',
+        subscription: 'free',
+        socialLinks: {
+          github: '',
+          twitter: '',
+          linkedin: ''
+        },
         isEmailVerified: user.emailVerified,
         lastLoginAt: new Date(),
         preferences: {
@@ -324,10 +352,15 @@ export class UserService extends BaseService {
         id: userData.id,
         email: userData.email,
         displayName: userData.displayName,
-        photoURL: userData.photoURL,
+        ...(userData.photoURL ? { photoURL: userData.photoURL } : {}),
         bio: '',
         website: '',
         location: '',
+        phone: userData.phone || '',
+        company: userData.company || '',
+        jobTitle: userData.jobTitle || '',
+        subscription: userData.subscription || 'free',
+        socialLinks: userData.socialLinks || { github: '', twitter: '', linkedin: '' },
         isEmailVerified: false,
         lastLoginAt: new Date(),
         createdAt: userData.createdAt,
