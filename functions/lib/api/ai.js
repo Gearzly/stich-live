@@ -1,0 +1,17 @@
+"use strict";
+/**
+ * AI Generation API
+ * Handles AI model interactions and code generation using Hono
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createAIApp = void 0;
+const hono_1 = require("hono");
+const routes_1 = require("./ai/routes");
+const createAIApp = () => {
+    const app = new hono_1.Hono();
+    // Mount AI routes
+    app.route('/', routes_1.ai);
+    return app;
+};
+exports.createAIApp = createAIApp;
+//# sourceMappingURL=ai.js.map

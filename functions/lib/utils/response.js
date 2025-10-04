@@ -1,39 +1,66 @@
+"use strict";
 /**
- * Response utility functions for standardized API responses
+ * Standardized API Response Utilities
  */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ERROR_CODES = void 0;
+exports.createSuccessResponse = createSuccessResponse;
+exports.createErrorResponse = createErrorResponse;
+exports.createPaginatedResponse = createPaginatedResponse;
 /**
- * Creates a standardized success response
+ * Create a standardized success response
  */
-export function createSuccessResponse(data, meta) {
+function createSuccessResponse(data, message) {
     return {
         success: true,
         data,
-        meta: {
-            timestamp: new Date().toISOString(),
-            ...meta
-        }
+        message,
+        timestamp: Date.now(),
     };
 }
 /**
- * Creates a standardized error response
+ * Create a standardized error response
  */
-export function createErrorResponse(code, message, details) {
+function createErrorResponse(code, message, data) {
     return {
         success: false,
-        error: {
-            code,
-            message,
-            details
-        },
-        meta: {
-            timestamp: new Date().toISOString()
-        }
+        error: message,
+        code,
+        data,
+        timestamp: Date.now(),
     };
 }
 /**
- * Creates a paginated success response
+ * Create a paginated response
  */
-export function createPaginatedResponse(data, pagination) {
-    return createSuccessResponse({ data, pagination });
+function createPaginatedResponse(data, pagination, message) {
+    const totalPages = Math.ceil(pagination.total / pagination.limit);
+    return {
+        success: true,
+        data,
+        message,
+        pagination: {
+            ...pagination,
+            totalPages,
+            hasNext: pagination.page < totalPages,
+            hasPrev: pagination.page > 1,
+        },
+        timestamp: Date.now(),
+    };
 }
+/**
+ * Common error codes
+ */
+exports.ERROR_CODES = {
+    VALIDATION_ERROR: 'VALIDATION_ERROR',
+    UNAUTHORIZED: 'UNAUTHORIZED',
+    FORBIDDEN: 'FORBIDDEN',
+    NOT_FOUND: 'NOT_FOUND',
+    CONFLICT: 'CONFLICT',
+    RATE_LIMITED: 'RATE_LIMITED',
+    INTERNAL_ERROR: 'INTERNAL_ERROR',
+    SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+    AI_PROVIDER_ERROR: 'AI_PROVIDER_ERROR',
+    GENERATION_FAILED: 'GENERATION_FAILED',
+};
 //# sourceMappingURL=response.js.map

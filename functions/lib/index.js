@@ -1,76 +1,137 @@
-import { onRequest } from 'firebase-functions/v2/https';
-import { setGlobalOptions } from 'firebase-functions/v2';
-import { initializeApp } from 'firebase-admin/app';
-import { createApp } from './app';
-// Initialize Firebase Admin SDK
-initializeApp();
-// Set global options for all functions
-setGlobalOptions({
-    maxInstances: 10,
-    region: 'us-central1',
-    memory: '1GiB',
-    timeoutSeconds: 60,
+"use strict";
+/**
+ * Firebase Functions Entry Point
+ * Stich AI Web Application Generator Backend
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
 });
-// Create the Express/Hono app
-const app = createApp();
-// Export the main API function
-export const api = onRequest({
-    cors: true,
-    maxInstances: 10,
-    memory: '1GiB',
-    timeoutSeconds: 60,
-}, async (req, res) => {
-    try {
-        // Convert Firebase Functions request to Hono Request
-        const url = `https://${req.get('host') || 'localhost'}${req.url}`;
-        const headers = new Headers();
-        // Copy headers from Express request
-        Object.entries(req.headers).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-                headers.set(key, value);
-            }
-            else if (Array.isArray(value)) {
-                headers.set(key, value.join(', '));
-            }
-        });
-        // Create Request object
-        const requestInit = {
-            method: req.method,
-            headers,
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
         };
-        if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-            requestInit.body = JSON.stringify(req.body);
-        }
-        const request = new Request(url, requestInit);
-        // Get response from Hono app
-        const response = await app.fetch(request);
-        // Convert Hono Response to Express response
-        res.status(response.status);
-        // Set response headers
-        response.headers.forEach((value, key) => {
-            res.set(key, value);
-        });
-        // Send response body
-        const body = await response.text();
-        res.send(body);
-    }
-    catch (error) {
-        console.error('Error handling request:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ai = exports.auth = void 0;
+const https_1 = require("firebase-functions/v2/https");
+const v2_1 = require("firebase-functions/v2");
+const admin = __importStar(require("firebase-admin"));
+// Initialize Firebase Admin
+admin.initializeApp();
+// Set global options for all functions
+(0, v2_1.setGlobalOptions)({
+    region: 'us-central1',
+    maxInstances: 100,
+    memory: '512MiB',
+    timeoutSeconds: 540,
 });
-// Health check function
-export const health = onRequest({
+// Import route handlers
+const auth_1 = require("./api/auth");
+const ai_1 = require("./api/ai");
+const firebase_adapter_1 = require("./utils/firebase-adapter");
+// Import callable functions
+// import { generateApplication } from './services/ai/generation';
+// import { deployApplication } from './services/deployment/deploy';
+// import { processFileUpload } from './services/storage/files';
+// Import Firestore triggers
+// import { onApplicationCreated, onApplicationUpdated } from './triggers/applications';
+// import { onUserCreated, onUserUpdated } from './triggers/users';
+// import { onGenerationUpdated } from './triggers/generations';
+// ==========================================
+// HTTP Functions (REST API)
+// ==========================================
+/**
+ * Authentication API
+ * Handles login, registration, password reset, OAuth
+ */
+exports.auth = (0, https_1.onRequest)({
     cors: true,
-    maxInstances: 1,
-    memory: '256MiB',
-    timeoutSeconds: 10,
-}, (req, res) => {
-    res.status(200).json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        environment: process.env.NODE_ENV || 'development',
-    });
-});
+    maxInstances: 50,
+}, (0, firebase_adapter_1.honoToFirebase)((0, auth_1.createAuthApp)()));
+/**
+ * AI Generation API
+ * Handles AI model interactions and code generation
+ */
+exports.ai = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 20,
+    memory: '1GiB',
+    timeoutSeconds: 540,
+}, (0, firebase_adapter_1.honoToFirebase)((0, ai_1.createAIApp)()));
+/**
+ * Generation Queue Processor
+ * Processes AI generation requests from the queue
+ */
+// export const processGenerationQueue = onMessagePublished({
+//   topic: 'generation-queue',
+//   maxInstances: 5,
+//   memory: '2GiB',
+//   timeoutSeconds: 540,
+// }, async (event) => {
+//   const { processGenerationMessage } = await import('./services/queue/generation');
+//   return processGenerationMessage(event);
+// });
+/**
+ * Deployment Queue Processor
+ * Processes application deployment requests
+ */
+// export const processDeploymentQueue = onMessagePublished({
+//   topic: 'deployment-queue',
+//   maxInstances: 3,
+//   memory: '1GiB',
+//   timeoutSeconds: 300,
+// }, async (event) => {
+//   const { processDeploymentMessage } = await import('./services/queue/deployment');
+//   return processDeploymentMessage(event);
+// });
+// ==========================================
+// Remote Config Functions
+// ==========================================
+// import { onConfigUpdated } from 'firebase-functions/v2/remoteconfig';
+/**
+ * Remote Config Update Trigger
+ * Runs when Remote Config is updated
+ */
+// export const onRemoteConfigUpdated = onConfigUpdated(async () => {
+//   const { syncRemoteConfig } = await import('./services/config/sync');
+//   return syncRemoteConfig();
+// });
+// Export types for client use
+// export type { 
+//   GenerateAppRequest, 
+//   GenerateAppResponse 
+// } from './types/ai';
+// export type { 
+//   DeployAppRequest, 
+//   DeployAppResponse 
+// } from './types/deployment';
+// export type { 
+//   ProcessFileRequest, 
+//   ProcessFileResponse 
+// } from './types/files';
 //# sourceMappingURL=index.js.map

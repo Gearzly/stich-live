@@ -1,16 +1,16 @@
 /**
  * AI Generation API
- * Handles AI model interactions and code generation
+ * Handles AI model interactions and code generation using Hono
  */
 
-import express from 'express';
+import { Hono } from 'hono';
+import { ai as aiRoutes } from './ai/routes';
 
 export const createAIApp = () => {
-  const app = express();
+  const app = new Hono();
   
-  app.get('/health', (req, res) => {
-    res.json({ success: true, service: 'ai', status: 'healthy' });
-  });
+  // Mount AI routes
+  app.route('/', aiRoutes);
   
   return app;
 };

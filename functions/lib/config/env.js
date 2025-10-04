@@ -1,34 +1,55 @@
-export const config = {
-    // Environment
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    // AI Provider API Keys
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-    GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY,
-    CEREBRAS_API_KEY: process.env.CEREBRAS_API_KEY,
-    // Rate Limiting
-    RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-    RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-    // AI Generation Limits
-    MAX_TOKENS_PER_REQUEST: parseInt(process.env.MAX_TOKENS_PER_REQUEST || '4000'),
-    MAX_FILES_PER_APP: parseInt(process.env.MAX_FILES_PER_APP || '50'),
-    // File Upload Limits
-    MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB || '10'),
-    ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'js,ts,jsx,tsx,css,html,json,md').split(','),
-    // CORS Origins
-    FRONTEND_URLS: [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'https://stich-live.vercel.app',
-        ...(process.env.ADDITIONAL_ORIGINS?.split(',') || []),
-    ],
-    // Database
-    FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
-    // Logging
-    LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+"use strict";
+/**
+ * Environment configuration and validation
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_MODELS = exports.AI_PROVIDERS = exports.env = void 0;
+/**
+ * Get environment variable with validation
+ */
+function getEnvVar(name, required = true) {
+    const value = process.env[name];
+    if (required && !value) {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value || '';
+}
+/**
+ * Application environment configuration
+ */
+exports.env = {
+    openai: {
+        apiKey: getEnvVar('OPENAI_API_KEY'),
+    },
+    anthropic: {
+        apiKey: getEnvVar('ANTHROPIC_API_KEY'),
+    },
+    google: {
+        apiKey: getEnvVar('GOOGLE_AI_API_KEY'),
+    },
+    cerebras: {
+        apiKey: getEnvVar('CEREBRAS_API_KEY', false), // Optional
+    },
+    firebase: {
+        projectId: getEnvVar('GCLOUD_PROJECT') || getEnvVar('FIREBASE_PROJECT_ID', false),
+    },
 };
-// Validation helpers
-export const isProduction = () => config.NODE_ENV === 'production';
-export const isDevelopment = () => config.NODE_ENV === 'development';
-export const isEmulated = () => !!config.FIRESTORE_EMULATOR_HOST;
+/**
+ * AI Provider configuration
+ */
+exports.AI_PROVIDERS = {
+    OPENAI: 'openai',
+    ANTHROPIC: 'anthropic',
+    GOOGLE: 'google',
+    CEREBRAS: 'cerebras',
+};
+/**
+ * Default AI models for each provider
+ */
+exports.DEFAULT_MODELS = {
+    [exports.AI_PROVIDERS.OPENAI]: 'gpt-4o',
+    [exports.AI_PROVIDERS.ANTHROPIC]: 'claude-3-5-sonnet-20241022',
+    [exports.AI_PROVIDERS.GOOGLE]: 'gemini-1.5-pro',
+    [exports.AI_PROVIDERS.CEREBRAS]: 'llama3.1-70b',
+};
 //# sourceMappingURL=env.js.map

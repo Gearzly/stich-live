@@ -1,361 +1,400 @@
-import { BaseService, NotFoundError, AuthorizationError } from './BaseService';
-import { z } from 'zod';
-// Validation schemas
-const generateCodeSchema = z.object({
-    appId: z.string().min(1, 'App ID is required'),
-    prompt: z.string().min(1, 'Prompt is required').max(10000),
-    provider: z.enum(['openai', 'anthropic', 'google', 'cerebras']).optional(),
-    model: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    maxTokens: z.number().min(1).max(4000).optional(),
-    stream: z.boolean().optional()
-});
-const paginationSchema = z.object({
-    page: z.coerce.number().min(1).optional(),
-    limit: z.coerce.number().min(1).max(100).optional(),
-    sortBy: z.string().optional(),
-    sortOrder: z.enum(['asc', 'desc']).optional()
-});
-export class AIGenerationService extends BaseService {
-    generationsCollection = 'generations';
-    appsCollection = 'apps';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AIGenerationService = void 0;
+const BaseService_1 = require("./BaseService");
+const env_1 = require("../config/env");
+const openai_1 = __importDefault(require("openai"));
+const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
+/**
+ * AI Generation Service
+ * Handles code generation using multiple AI providers
+ */
+class AIGenerationService extends BaseService_1.BaseService {
+    constructor() {
+        super();
+        // Initialize AI providers
+        this.openai = new openai_1.default({ apiKey: env_1.env.openai.apiKey });
+        this.anthropic = new sdk_1.default({ apiKey: env_1.env.anthropic.apiKey });
+    }
     /**
-     * Initiates a new code generation session
+     * Generate code for an application
      */
-    async generateCode(userId, generateRequest) {
+    async generateCode(userId, request) {
         try {
-            const validatedData = this.validateInput(generateRequest, generateCodeSchema);
-            // Verify app ownership
-            const appDoc = await this.db.collection(this.appsCollection).doc(validatedData.appId).get();
-            if (!appDoc.exists) {
-                throw new NotFoundError('App', validatedData.appId);
-            }
-            const appData = appDoc.data();
-            if (appData?.userId !== userId) {
-                throw new AuthorizationError('Access denied to this app');
-            }
-            // Apply defaults
-            const provider = validatedData.provider || 'openai';
-            const model = validatedData.model || this.getDefaultModel(provider);
-            const temperature = validatedData.temperature || 0.7;
-            const maxTokens = validatedData.maxTokens || 2000;
-            const stream = validatedData.stream || false;
             // Create generation session
+            const sessionId = this.generateId();
             const session = {
+                id: sessionId,
                 userId,
-                appId: validatedData.appId,
-                prompt: validatedData.prompt,
-                provider,
-                model,
-                temperature,
-                maxTokens,
-                stream,
+                request,
                 status: 'pending',
-                progress: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                generatedFiles: [],
+                files: [],
                 metadata: {
-                    startTime: Date.now(),
-                    estimatedDuration: this.estimateGenerationTime(validatedData.prompt.length)
-                }
+                    provider: request.provider,
+                    model: request.model || env_1.DEFAULT_MODELS[request.provider],
+                },
+                createdAt: this.now(),
+                updatedAt: this.now(),
             };
-            const docRef = await this.db.collection(this.generationsCollection).add(session);
-            // Update app metadata
-            await this.db.collection(this.appsCollection).doc(validatedData.appId).update({
-                'metadata.lastGenerationId': docRef.id,
-                'metadata.lastGeneratedAt': new Date(),
-                updatedAt: new Date()
+            // Save session to Firestore
+            await this.db.collection('generations').doc(sessionId).set(session);
+            // Start generation process
+            this.processGeneration(session).catch(error => {
+                this.logger.error('Background generation failed:', error);
+                this.updateSessionStatus(sessionId, 'failed', { error: error.message });
             });
-            this.logger.info('Code generation initiated', {
-                generationId: docRef.id,
-                appId: validatedData.appId,
-                userId,
-                provider,
-                model
-            });
-            return { id: docRef.id, ...session };
+            return session;
         }
         catch (error) {
             this.handleError(error, 'generateCode');
         }
     }
     /**
-     * Updates generation session status and progress
+     * Get generation session by ID
      */
-    async updateGenerationStatus(generationId, userId, updates) {
+    async getGenerationById(sessionId, userId) {
         try {
-            // Verify ownership
-            const generation = await this.getGenerationById(generationId, userId);
-            const updateData = {
-                ...updates,
-                updatedAt: new Date()
-            };
-            // Update completion time if completed or failed
-            if (updates.status === 'completed' || updates.status === 'failed') {
-                updateData.metadata = {
-                    ...generation.metadata,
-                    ...updates.metadata,
-                    endTime: Date.now(),
-                    duration: Date.now() - (generation.metadata?.startTime || Date.now())
-                };
+            const doc = await this.db.collection('generations').doc(sessionId).get();
+            if (!doc.exists) {
+                throw new Error('Generation session not found');
             }
-            await this.db.collection(this.generationsCollection).doc(generationId).update(updateData);
-            this.logger.info('Generation status updated', {
-                generationId,
-                userId,
-                status: updates.status,
-                progress: updates.progress
-            });
-        }
-        catch (error) {
-            this.handleError(error, 'updateGenerationStatus');
-        }
-    }
-    /**
-     * Retrieves a generation session by ID with ownership verification
-     */
-    async getGenerationById(generationId, userId) {
-        try {
-            const generationDoc = await this.db.collection(this.generationsCollection).doc(generationId).get();
-            if (!generationDoc.exists) {
-                throw new NotFoundError('Generation', generationId);
+            const session = doc.data();
+            if (session.userId !== userId) {
+                throw new Error('Unauthorized access to generation session');
             }
-            const generationData = generationDoc.data();
-            // Verify ownership
-            if (generationData.userId !== userId) {
-                throw new AuthorizationError('Access denied to this generation');
-            }
-            this.logger.info('Retrieved generation', { generationId, userId });
-            return { id: generationDoc.id, ...generationData };
+            return session;
         }
         catch (error) {
             this.handleError(error, 'getGenerationById');
         }
     }
     /**
-     * Retrieves generation sessions for a user with pagination
+     * Process generation in background
      */
-    async getUserGenerations(userId, paginationData) {
+    async processGeneration(session) {
+        var _a;
         try {
-            const paginationInput = this.validateInput(paginationData, paginationSchema);
-            // Apply defaults
-            const page = paginationInput.page || 1;
-            const limit = paginationInput.limit || 10;
-            const sortBy = paginationInput.sortBy || 'createdAt';
-            const sortOrder = paginationInput.sortOrder || 'desc';
-            const offset = (page - 1) * limit;
-            // Build query
-            let query = this.db.collection(this.generationsCollection)
-                .where('userId', '==', userId)
-                .orderBy(sortBy, sortOrder);
-            // Get total count
-            const countSnapshot = await this.db.collection(this.generationsCollection)
-                .where('userId', '==', userId)
-                .count()
-                .get();
-            // Get paginated results
-            const snapshot = await query.offset(offset).limit(limit).get();
-            const generations = [];
-            snapshot.forEach(doc => {
-                generations.push({ id: doc.id, ...doc.data() });
+            // Update status to generating
+            await this.updateSessionStatus(session.id, 'generating');
+            // Generate prompt
+            const prompt = this.buildGenerationPrompt(session.request);
+            // Call AI provider
+            const startTime = Date.now();
+            const response = await this.callAIProvider(session.request.provider, prompt, session.request);
+            const processingTime = Date.now() - startTime;
+            if (response.success && response.files) {
+                // Update session with generated files
+                await this.updateSessionFiles(session.id, response.files, {
+                    tokensUsed: (_a = response.metadata) === null || _a === void 0 ? void 0 : _a.tokensUsed,
+                    processingTime,
+                    provider: session.request.provider,
+                    model: session.request.model || env_1.DEFAULT_MODELS[session.request.provider],
+                });
+                await this.updateSessionStatus(session.id, 'completed');
+            }
+            else {
+                await this.updateSessionStatus(session.id, 'failed', { error: response.error });
+            }
+        }
+        catch (error) {
+            await this.updateSessionStatus(session.id, 'failed', { error: error.message });
+            throw error;
+        }
+    }
+    /**
+     * Build generation prompt based on request
+     */
+    buildGenerationPrompt(request) {
+        var _a, _b;
+        const systemPrompt = `You are an expert full-stack developer specializing in modern web applications.
+
+Generate a complete, production-ready application based on the user's requirements.
+
+Guidelines:
+- Use modern best practices and clean code principles
+- Include proper TypeScript types and interfaces
+- Add comprehensive error handling and validation
+- Create responsive, accessible UI components
+- Include proper file structure and organization
+- Add comments and documentation where helpful
+- Ensure code is secure and follows security best practices
+
+Return a JSON response with this structure:
+{
+  "files": [
+    {
+      "name": "filename.ext",
+      "path": "relative/path/to/file",
+      "content": "file content here",
+      "language": "typescript|javascript|css|html|json",
+      "type": "component|page|config|style|data|test"
+    }
+  ]
+}`;
+        let userPrompt = `Create a ${request.appType || 'web application'} with the following requirements:
+
+Description: ${request.prompt}`;
+        if (request.framework) {
+            userPrompt += `\nFramework: ${request.framework}`;
+        }
+        if ((_a = request.features) === null || _a === void 0 ? void 0 : _a.length) {
+            userPrompt += `\nRequired features: ${request.features.join(', ')}`;
+        }
+        if (request.customization) {
+            userPrompt += `\nCustomization preferences:`;
+            if (request.customization.theme) {
+                userPrompt += `\n- Theme: ${request.customization.theme}`;
+            }
+            if (request.customization.layout) {
+                userPrompt += `\n- Layout: ${request.customization.layout}`;
+            }
+            if ((_b = request.customization.components) === null || _b === void 0 ? void 0 : _b.length) {
+                userPrompt += `\n- Components: ${request.customization.components.join(', ')}`;
+            }
+        }
+        return {
+            systemPrompt,
+            userPrompt,
+        };
+    }
+    /**
+     * Call the appropriate AI provider
+     */
+    async callAIProvider(provider, prompt, request) {
+        switch (provider) {
+            case 'openai':
+                return this.callOpenAI(prompt, request);
+            case 'anthropic':
+                return this.callAnthropic(prompt, request);
+            case 'google':
+                return this.callGoogle(prompt, request);
+            case 'cerebras':
+                return this.callCerebras(prompt, request);
+            default:
+                throw new Error(`Unsupported AI provider: ${provider}`);
+        }
+    }
+    /**
+     * Call OpenAI API
+     */
+    async callOpenAI(prompt, request) {
+        var _a, _b, _c;
+        try {
+            const response = await this.openai.chat.completions.create({
+                model: request.model || env_1.DEFAULT_MODELS.openai,
+                messages: [
+                    { role: 'system', content: prompt.systemPrompt },
+                    { role: 'user', content: prompt.userPrompt }
+                ],
+                temperature: request.temperature || 0.7,
+                max_tokens: request.maxTokens || 4000,
             });
-            const total = countSnapshot.data().count;
-            const totalPages = Math.ceil(total / limit);
-            this.logger.info('Retrieved user generations', {
-                userId,
-                count: generations.length,
-                total
-            });
+            const content = (_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content;
+            if (!content) {
+                throw new Error('No response content from OpenAI');
+            }
+            // Parse JSON response
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('Invalid JSON response from OpenAI');
+            }
+            const parsed = JSON.parse(jsonMatch[0]);
             return {
-                data: generations,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages,
-                    hasNext: page < totalPages,
-                    hasPrev: page > 1
-                }
+                success: true,
+                files: parsed.files || [],
+                metadata: {
+                    tokensUsed: ((_c = response.usage) === null || _c === void 0 ? void 0 : _c.total_tokens) || 0,
+                    processingTime: 0,
+                    model: response.model,
+                },
             };
         }
         catch (error) {
-            this.handleError(error, 'getUserGenerations');
+            return {
+                success: false,
+                error: error.message,
+            };
         }
     }
     /**
-     * Retrieves generation sessions for a specific app
+     * Call Anthropic API
      */
-    async getAppGenerations(appId, userId, paginationData) {
+    async callAnthropic(prompt, request) {
         try {
-            // Verify app ownership first
-            const appDoc = await this.db.collection(this.appsCollection).doc(appId).get();
-            if (!appDoc.exists) {
-                throw new NotFoundError('App', appId);
-            }
-            const appData = appDoc.data();
-            if (appData?.userId !== userId) {
-                throw new AuthorizationError('Access denied to this app');
-            }
-            const paginationInput = this.validateInput(paginationData, paginationSchema);
-            // Apply defaults
-            const page = paginationInput.page || 1;
-            const limit = paginationInput.limit || 10;
-            const sortBy = paginationInput.sortBy || 'createdAt';
-            const sortOrder = paginationInput.sortOrder || 'desc';
-            const offset = (page - 1) * limit;
-            // Build query
-            let query = this.db.collection(this.generationsCollection)
-                .where('appId', '==', appId)
-                .orderBy(sortBy, sortOrder);
-            // Get total count
-            const countSnapshot = await this.db.collection(this.generationsCollection)
-                .where('appId', '==', appId)
-                .count()
-                .get();
-            // Get paginated results
-            const snapshot = await query.offset(offset).limit(limit).get();
-            const generations = [];
-            snapshot.forEach(doc => {
-                generations.push({ id: doc.id, ...doc.data() });
+            const response = await this.anthropic.messages.create({
+                model: request.model || env_1.DEFAULT_MODELS.anthropic,
+                max_tokens: request.maxTokens || 4000,
+                temperature: request.temperature || 0.7,
+                messages: [
+                    { role: 'user', content: `${prompt.systemPrompt}\n\n${prompt.userPrompt}` }
+                ],
             });
-            const total = countSnapshot.data().count;
-            const totalPages = Math.ceil(total / limit);
-            this.logger.info('Retrieved app generations', {
-                appId,
-                userId,
-                count: generations.length,
-                total
-            });
+            const content = response.content[0];
+            if (content.type !== 'text') {
+                throw new Error('Invalid response type from Anthropic');
+            }
+            // Parse JSON response
+            const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('Invalid JSON response from Anthropic');
+            }
+            const parsed = JSON.parse(jsonMatch[0]);
             return {
-                data: generations,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages,
-                    hasNext: page < totalPages,
-                    hasPrev: page > 1
-                }
+                success: true,
+                files: parsed.files || [],
+                metadata: {
+                    tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+                    processingTime: 0,
+                    model: response.model,
+                },
             };
         }
         catch (error) {
-            this.handleError(error, 'getAppGenerations');
+            return {
+                success: false,
+                error: error.message,
+            };
         }
     }
     /**
-     * Cancels a running generation session
+     * Call Google AI API (placeholder)
      */
-    async cancelGeneration(generationId, userId) {
+    async callGoogle(prompt, request) {
+        // TODO: Implement Google AI integration
+        return {
+            success: false,
+            error: 'Google AI integration not yet implemented',
+        };
+    }
+    /**
+     * Call Cerebras API (placeholder)
+     */
+    async callCerebras(prompt, request) {
+        // TODO: Implement Cerebras integration
+        return {
+            success: false,
+            error: 'Cerebras integration not yet implemented',
+        };
+    }
+    /**
+     * Update session status
+     */
+    async updateSessionStatus(sessionId, status, additionalData) {
+        const updateData = {
+            status,
+            updatedAt: this.now(),
+        };
+        if (status === 'completed') {
+            updateData.completedAt = this.now();
+        }
+        if (additionalData) {
+            Object.assign(updateData, additionalData);
+        }
+        await this.db.collection('generations').doc(sessionId).update(updateData);
+    }
+    /**
+     * Update session with generated files
+     */
+    async updateSessionFiles(sessionId, files, metadata) {
+        await this.db.collection('generations').doc(sessionId).update({
+            files,
+            metadata,
+            updatedAt: this.now(),
+        });
+    }
+    /**
+     * Stream generation progress (for WebSocket integration)
+     */
+    async *streamGeneration(sessionId, userId) {
+        // TODO: Implement real-time streaming
+        // This would integrate with WebSocket service for live updates
+        const session = await this.getGenerationById(sessionId, userId);
+        // For now, just yield the current session status
+        yield {
+            type: 'status',
+            data: { status: session.status },
+            timestamp: Date.now(),
+        };
+        if (session.status === 'completed') {
+            yield {
+                type: 'completed',
+                data: { files: session.files },
+                timestamp: Date.now(),
+            };
+        }
+    }
+    /**
+     * List user's generation sessions with pagination
+     */
+    async listUserGenerations(userId, options) {
         try {
-            const generation = await this.getGenerationById(generationId, userId);
-            // Only allow cancellation of pending or running generations
-            if (generation.status !== 'pending' && generation.status !== 'running') {
-                throw new Error('Cannot cancel completed or failed generation');
+            let query = this.db.collection('generations')
+                .where('userId', '==', userId)
+                .orderBy('createdAt', 'desc');
+            if (options === null || options === void 0 ? void 0 : options.status) {
+                query = query.where('status', '==', options.status);
             }
-            await this.updateGenerationStatus(generationId, userId, {
-                status: 'failed',
-                error: 'Cancelled by user'
-            });
-            this.logger.info('Generation cancelled', { generationId, userId });
+            if (options === null || options === void 0 ? void 0 : options.limit) {
+                query = query.limit(options.limit);
+            }
+            if (options === null || options === void 0 ? void 0 : options.offset) {
+                query = query.offset(options.offset);
+            }
+            const snapshot = await query.get();
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
         catch (error) {
-            this.handleError(error, 'cancelGeneration');
+            this.handleError(error, 'listUserGenerations');
         }
     }
     /**
-     * Deletes a generation session and its associated files
+     * Delete generation session
      */
-    async deleteGeneration(generationId, userId) {
+    async deleteGeneration(sessionId, userId) {
         try {
-            // Verify ownership
-            await this.getGenerationById(generationId, userId);
-            await this.db.collection(this.generationsCollection).doc(generationId).delete();
-            this.logger.info('Generation deleted', { generationId, userId });
+            const session = await this.getGenerationById(sessionId, userId);
+            if (session.userId !== userId) {
+                throw new Error('Unauthorized access to generation session');
+            }
+            await this.db.collection('generations').doc(sessionId).delete();
         }
         catch (error) {
             this.handleError(error, 'deleteGeneration');
         }
     }
     /**
-     * Gets statistics for user's AI usage
+     * Test AI provider connectivity
      */
-    async getUserAIStats(userId) {
+    async testProvider(provider) {
         try {
-            // Get all user generations for stats
-            const snapshot = await this.db.collection(this.generationsCollection)
-                .where('userId', '==', userId)
-                .get();
-            const generations = [];
-            snapshot.forEach(doc => {
-                generations.push({ id: doc.id, ...doc.data() });
-            });
-            // Calculate statistics
-            const totalGenerations = generations.length;
-            const successfulGenerations = generations.filter(g => g.status === 'completed').length;
-            const failedGenerations = generations.filter(g => g.status === 'failed').length;
-            const completedGenerations = generations.filter(g => g.metadata?.duration);
-            const averageDuration = completedGenerations.length > 0
-                ? completedGenerations.reduce((sum, g) => sum + (g.metadata?.duration || 0), 0) / completedGenerations.length
-                : 0;
-            // Provider usage stats
-            const providerUsage = {
-                openai: 0,
-                anthropic: 0,
-                google: 0,
-                cerebras: 0
+            const startTime = Date.now();
+            const testPrompt = {
+                systemPrompt: 'You are a helpful assistant.',
+                userPrompt: 'Say "Hello, world!" and return it as JSON: {"message": "Hello, world!"}',
             };
-            generations.forEach(g => {
-                providerUsage[g.provider] = (providerUsage[g.provider] || 0) + 1;
+            const response = await this.callAIProvider(provider, testPrompt, {
+                prompt: 'test',
+                provider,
+                temperature: 0.1,
+                maxTokens: 50,
             });
-            // Monthly usage (last 12 months)
-            const monthlyUsage = [];
-            const now = new Date();
-            for (let i = 11; i >= 0; i--) {
-                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const month = date.toISOString().slice(0, 7); // YYYY-MM format
-                const count = generations.filter(g => {
-                    const genMonth = g.createdAt.toISOString().slice(0, 7);
-                    return genMonth === month;
-                }).length;
-                monthlyUsage.push({ month, count });
-            }
-            this.logger.info('Retrieved user AI stats', {
-                userId,
-                totalGenerations,
-                successfulGenerations
-            });
+            const latency = Date.now() - startTime;
             return {
-                totalGenerations,
-                successfulGenerations,
-                failedGenerations,
-                averageDuration,
-                providerUsage,
-                monthlyUsage
+                success: response.success,
+                latency,
+                error: response.error,
             };
         }
         catch (error) {
-            this.handleError(error, 'getUserAIStats');
+            return {
+                success: false,
+                error: error.message,
+            };
         }
     }
-    /**
-     * Gets the default model for a given provider
-     */
-    getDefaultModel(provider) {
-        const defaults = {
-            openai: 'gpt-4o',
-            anthropic: 'claude-3-5-sonnet-20241022',
-            google: 'gemini-1.5-pro',
-            cerebras: 'llama3.1-8b'
-        };
-        return defaults[provider];
-    }
-    /**
-     * Estimates generation time based on prompt length
-     */
-    estimateGenerationTime(promptLength) {
-        // Base estimation: 30 seconds + 1 second per 100 characters
-        return 30000 + Math.ceil(promptLength / 100) * 1000;
-    }
 }
+exports.AIGenerationService = AIGenerationService;
 //# sourceMappingURL=AIGenerationService.js.map

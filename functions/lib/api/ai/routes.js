@@ -1,21 +1,34 @@
-import { Hono } from 'hono';
-import { authMiddleware } from '../../middleware/auth';
-import { AIController } from './controller';
-export const aiRoutes = new Hono();
-// Create controller instance following dependency injection pattern
-const aiController = new AIController();
-// All AI routes require authentication
-aiRoutes.use('*', authMiddleware);
-// AI generation endpoints
-aiRoutes.post('/generate', (c) => aiController.generateCode(c));
-aiRoutes.get('/generations/user', (c) => aiController.getUserGenerations(c));
-aiRoutes.get('/generations/:id', (c) => aiController.getGeneration(c));
-aiRoutes.delete('/generations/:id', (c) => aiController.deleteGeneration(c));
-aiRoutes.post('/generations/:id/cancel', (c) => aiController.cancelGeneration(c));
-// App-specific generations
-aiRoutes.get('/apps/:appId/generations', (c) => aiController.getAppGenerations(c));
-// Generation status and monitoring
-aiRoutes.put('/generations/:id/status', (c) => aiController.updateGenerationStatus(c));
-// User AI statistics
-aiRoutes.get('/stats', (c) => aiController.getUserAIStats(c));
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ai = void 0;
+const hono_1 = require("hono");
+const controller_1 = require("./controller");
+const hono_auth_1 = require("../../middleware/hono-auth");
+const ai = new hono_1.Hono();
+exports.ai = ai;
+const aiController = new controller_1.AIController();
+// Apply authentication middleware to protected routes
+ai.use('/generate', hono_auth_1.authMiddleware);
+ai.use('/realtime/*', hono_auth_1.authMiddleware);
+ai.use('/generation/*', hono_auth_1.authMiddleware);
+/**
+ * POST /generate - Generate code for an application
+ */
+ai.post('/generate', (c) => aiController.generateCode(c));
+/**
+ * POST /realtime/start - Start real-time generation with live updates
+ */
+ai.post('/realtime/start', (c) => aiController.startRealtimeGeneration(c));
+/**
+ * GET /generation/:id - Get generation session by ID
+ */
+ai.get('/generation/:id', (c) => aiController.getGeneration(c));
+/**
+ * GET /providers - Get available AI providers
+ */
+ai.get('/providers', (c) => aiController.getProviders(c));
+/**
+ * GET /health - Health check endpoint
+ */
+ai.get('/health', (c) => aiController.health(c));
 //# sourceMappingURL=routes.js.map

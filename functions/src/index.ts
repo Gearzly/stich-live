@@ -21,11 +21,8 @@ setGlobalOptions({
 
 // Import route handlers
 import { createAuthApp } from './api/auth';
-import { createAppsApp } from './api/apps';
-import { createUsersApp } from './api/users';
 import { createAIApp } from './api/ai';
-import { createFilesApp } from './api/files';
-import { createAnalyticsApp } from './api/analytics';
+import { honoToFirebase } from './utils/firebase-adapter';
 
 // Import callable functions
 // import { generateApplication } from './services/ai/generation';
@@ -48,25 +45,7 @@ import { createAnalyticsApp } from './api/analytics';
 export const auth = onRequest({
   cors: true,
   maxInstances: 50,
-}, createAuthApp());
-
-/**
- * Applications API
- * Handles CRUD operations for generated applications
- */
-export const apps = onRequest({
-  cors: true,
-  maxInstances: 50,
-}, createAppsApp());
-
-/**
- * Users API
- * Handles user profile, settings, subscription management
- */
-export const users = onRequest({
-  cors: true,
-  maxInstances: 50,
-}, createUsersApp());
+}, honoToFirebase(createAuthApp()));
 
 /**
  * AI Generation API
@@ -77,26 +56,7 @@ export const ai = onRequest({
   maxInstances: 20,
   memory: '1GiB',
   timeoutSeconds: 540,
-}, createAIApp());
-
-/**
- * File Management API
- * Handles file operations, uploads, downloads
- */
-export const files = onRequest({
-  cors: true,
-  maxInstances: 30,
-  memory: '1GiB',
-}, createFilesApp());
-
-/**
- * Analytics API
- * Handles usage analytics, monitoring, metrics
- */
-export const analytics = onRequest({
-  cors: true,
-  maxInstances: 30,
-}, createAnalyticsApp());
+}, honoToFirebase(createAIApp()));
 
 // ==========================================
 // Callable Functions (Direct Client Calls)
@@ -119,6 +79,8 @@ export const analytics = onRequest({
 // export const deployApp = onCall({
 //   maxInstances: 10,
 //   memory: '1GiB',
+//   timeoutSeconds: 300,
+// }, deployApplication);
 //   timeoutSeconds: 300,
 // }, deployApplication);
 

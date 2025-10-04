@@ -4,9 +4,9 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { jest } from '@jest/globals';
+// import { jest } from '@jest/globals'; // Not needed in Vitest environment
 import { BrowserRouter } from 'react-router-dom';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import React from 'react';
 
 // Mock Firebase modules
@@ -322,8 +322,8 @@ export const setupTest = () => {
     writable: true
   });
   
-  // Setup WebSocket mock
-  global.WebSocket = vi.fn().mockImplementation(() => mockWebSocket);
+  // Setup WebSocket mock with proper typing
+  (global as any).WebSocket = vi.fn().mockImplementation(() => mockWebSocket);
   
   // Setup fetch mock
   mockFetch(mockApiResponses.success);
