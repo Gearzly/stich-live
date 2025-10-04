@@ -143,7 +143,7 @@ export default function SearchPage() {
             
             <div className="flex items-center gap-2">
               <Select 
-                value={filters.sortBy} 
+                value={filters.sortBy || 'relevance'} 
                 onValueChange={(value: string) => updateFilters({ sortBy: value as any })}
               >
                 <SelectTrigger className="w-40">

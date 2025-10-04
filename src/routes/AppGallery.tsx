@@ -6,39 +6,26 @@ import {
   Filter, 
   Grid3X3, 
   List, 
-  Star, 
   Eye, 
   Heart, 
-  Share2, 
-  Download, 
+  Share2,
   Play, 
-  Code, 
-  Globe, 
-  Users, 
-  Clock, 
-  TrendingUp, 
-  Award, 
-  Zap,
   ChevronDown,
   X,
   ExternalLink,
-  Copy,
   Bookmark,
-  MoreHorizontal,
   Shuffle,
-  ArrowUpRight,
-  Tag,
-  Calendar,
-  ThumbsUp,
-  MessageCircle,
-  GitFork
+  Award,
+  GitFork,
+  Clock
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { useAuth } from '../hooks/useAuth';
-import { ApplicationService, type Application } from '../services/application/ApplicationService';
+import { type Application } from '../services/application/ApplicationService';
 import { toast } from '../lib/toast';
 
 type ViewMode = 'grid' | 'list';
@@ -83,7 +70,7 @@ const AppGallery: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [appsPerPage] = useState(12);
 
-  const applicationService = new ApplicationService();
+  // const applicationService = new ApplicationService(); // Not currently used
 
   const categories = [
     { id: 'all', label: 'All Categories', count: 0 },
@@ -117,7 +104,7 @@ const AppGallery: React.FC = () => {
       setIsLoading(true);
       
       // In a real app, this would load public apps
-      const publicApps = await applicationService.getPublicApplications?.() || [];
+      // const publicApps = await applicationService.getPublicApplications?.() || [];
       
       // Simulate gallery apps for demo
       const mockApps: Application[] = Array.from({ length: 24 }, (_, i) => ({

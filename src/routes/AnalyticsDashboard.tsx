@@ -36,9 +36,7 @@ import {
   Calendar,
   Filter,
   Eye,
-  MousePointer,
-  Code,
-  Smartphone
+  Code
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -68,6 +66,7 @@ interface ChartData {
   revenue?: number;
   errors?: number;
   timestamp?: string;
+  color?: string; // For pie chart entries
 }
 
 interface SystemHealth {
@@ -157,13 +156,13 @@ export default function AnalyticsDashboard() {
   ];
 
   const userActivityData: ChartData[] = [
-    { name: 'Mon', users: 1200, apps: 340, revenue: 4200 },
-    { name: 'Tue', users: 1350, apps: 380, revenue: 4800 },
-    { name: 'Wed', users: 1180, apps: 320, revenue: 3900 },
-    { name: 'Thu', users: 1420, apps: 410, revenue: 5200 },
-    { name: 'Fri', users: 1380, apps: 390, revenue: 4900 },
-    { name: 'Sat', users: 980, apps: 280, revenue: 3400 },
-    { name: 'Sun', users: 1100, apps: 310, revenue: 3800 }
+    { name: 'Mon', value: 1200, users: 1200, apps: 340, revenue: 4200 },
+    { name: 'Tue', value: 1350, users: 1350, apps: 380, revenue: 4800 },
+    { name: 'Wed', value: 1180, users: 1180, apps: 320, revenue: 3900 },
+    { name: 'Thu', value: 1420, users: 1420, apps: 410, revenue: 5200 },
+    { name: 'Fri', value: 1380, users: 1380, apps: 390, revenue: 4900 },
+    { name: 'Sat', value: 980, users: 980, apps: 280, revenue: 3400 },
+    { name: 'Sun', value: 1100, users: 1100, apps: 310, revenue: 3800 }
   ];
 
   const appTypeDistribution: ChartData[] = [

@@ -17,11 +17,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { 
-  Settings, 
   Palette, 
-  Globe, 
-  Code, 
-  Brain, 
   Shield, 
   Zap, 
   User, 
@@ -30,11 +26,7 @@ import {
   RotateCcw,
   Moon,
   Sun,
-  Monitor,
-  Eye,
-  EyeOff,
-  Bell,
-  BellOff
+  Monitor
 } from 'lucide-react';
 
 export default function SettingsPage() {
