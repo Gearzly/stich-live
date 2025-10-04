@@ -31,7 +31,11 @@
     "test:coverage": "vitest run --coverage",
     "firebase:emulators": "cd functions && npm run build && cd .. && firebase emulators:start",
     "firebase:deploy": "cd functions && npm run build && cd .. && firebase deploy",
-    "setup": "npm install && cd functions && npm install"
+    "setup": "npm install && cd functions && npm install",
+    "db:migrate": "tsx scripts/run-migrations.ts",
+    "db:backup": "tsx scripts/database-backup.ts",
+    "db:health": "tsx scripts/database-health.ts",
+    "db:seed": "tsx scripts/seed-database.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
