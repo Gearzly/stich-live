@@ -1,222 +1,145 @@
-/**
- * Analytics API
- * Handles usage tracking, metrics, and analytics
- */
-
 import { Hono } from 'hono';
-import { logger } from 'firebase-functions';
-import { db } from '../config';
-import { authMiddleware, AuthUser } from '../middleware/hono-auth';
-import { corsMiddleware } from '../middleware/hono-cors';
+import { Context } from 'hono';
+import { honoAuthMiddleware } from '../middleware/honoAuth';
+import { AnalyticsService } from '../services/AnalyticsService';
 import { createSuccessResponse, createErrorResponse } from '../utils/response';
+import { logger } from 'firebase-functions';
+import { z } from 'zod';
 
-interface AnalyticsContext {
-  Variables: {
-    user: AuthUser;
-  };
-}
+const app = new Hono();
 
-export const createAnalyticsApp = () => {
-  const app = new Hono<AnalyticsContext>();
-  
-  // Apply middleware
-  app.use('*', corsMiddleware);
+// Validation schema for tracking events
+const trackEventSchema = z.object({
+  eventType: z.enum([
+    'app_created',
+    'app_updated', 
+    'app_deleted',
+    'app_deployed',
+    'app_viewed',
+    'app_starred',
+    'app_unstarred',
+    'app_forked',
+    'app_exported',
+    'generation_started',
+    'generation_completed',
+    'generation_failed',
+    'user_login',
+    'user_logout',
+    'github_connected',
+    'github_disconnected',
+    'realtime_session_started',
+    'realtime_session_ended',
+    'file_edited',
+    'chat_message_sent',
+  ] as const),
+  eventData: z.record(z.any()).default({}),
+  metadata: z.object({
+    userAgent: z.string().optional(),
+    ipAddress: z.string().optional(),
+    platform: z.string().optional(),
+    sessionId: z.string().optional(),
+    appId: z.string().optional(),
+    generationId: z.string().optional(),
+  }).default({}),
+});
 
-  /**
-   * Health check endpoint
-   */
-  app.get('/health', (c) => {
-    return c.json({ 
-      success: true, 
-      service: 'analytics', 
-      status: 'healthy',
-      timestamp: new Date().toISOString()
-    });
-  });
+/**
+ * POST /analytics/track
+ * Track a user activity event
+ */
+app.post('/track', honoAuthMiddleware, async (c: Context) => {
+  try {
+    const user = c.get('user');
+    const body = await c.req.json();
+    
+    const validatedData = trackEventSchema.parse(body);
 
-  /**
-   * GET /user-stats
-   * Get user analytics and statistics
-   */
-  app.get('/user-stats', authMiddleware, async (c) => {
-    try {
-      const user = c.get('user');
-      
-      // Get user's applications count
-      const appsSnapshot = await db.collection('applications')
-        .where('createdBy', '==', user.uid)
-        .get();
+    const eventData = {
+      userId: user.uid,
+      eventType: validatedData.eventType,
+      eventData: validatedData.eventData,
+      metadata: {
+        ...validatedData.metadata,
+        userAgent: c.req.header('user-agent'),
+        ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
+      },
+    };
 
-      // Get user's generations count
-      const generationsSnapshot = await db.collection('generations')
-        .where('userId', '==', user.uid)
-        .get();
+    const analyticsService = new AnalyticsService();
+    await analyticsService.trackEvent(eventData);
 
-      // Get user's files count
-      const filesSnapshot = await db.collection('files')
-        .where('uploadedBy', '==', user.uid)
-        .get();
-
-      // Calculate statistics
-      const stats = {
-        applications: {
-          total: appsSnapshot.docs.length,
-          byStatus: {} as Record<string, number>,
-          byFramework: {} as Record<string, number>,
-        },
-        generations: {
-          total: generationsSnapshot.docs.length,
-          successful: 0,
-          failed: 0,
-        },
-        files: {
-          total: filesSnapshot.docs.length,
-          totalSize: 0,
-        },
-        account: {
-          createdAt: user.email ? new Date() : null, // Placeholder
-          lastActive: new Date(),
-        }
-      };
-
-      // Analyze applications
-      appsSnapshot.docs.forEach(doc => {
-        const app = doc.data();
-        const status = app.status || 'unknown';
-        const framework = app.framework || 'unknown';
-        
-        stats.applications.byStatus[status] = (stats.applications.byStatus[status] || 0) + 1;
-        stats.applications.byFramework[framework] = (stats.applications.byFramework[framework] || 0) + 1;
-      });
-
-      // Analyze generations
-      generationsSnapshot.docs.forEach(doc => {
-        const generation = doc.data();
-        if (generation.status === 'completed') {
-          stats.generations.successful++;
-        } else if (generation.status === 'failed') {
-          stats.generations.failed++;
-        }
-      });
-
-      // Analyze files
-      filesSnapshot.docs.forEach(doc => {
-        const file = doc.data();
-        stats.files.totalSize += file.size || 0;
-      });
-
-      return c.json(createSuccessResponse(stats));
-    } catch (error) {
-      logger.error('Failed to get user stats:', error);
-      return c.json(createErrorResponse('STATS_ERROR', 'Failed to get user statistics'), 500);
+    return c.json(createSuccessResponse({
+      tracked: true,
+      eventType: validatedData.eventType,
+    }));
+  } catch (error) {
+    logger.error('Analytics tracking error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return c.json(createErrorResponse('VALIDATION_ERROR', 'Invalid event data'), 400);
     }
-  });
+    
+    return c.json(createErrorResponse('ANALYTICS_ERROR', 'Failed to track event'), 500);
+  }
+});
 
-  /**
-   * POST /track-event
-   * Track analytics events
-   */
-  app.post('/track-event', authMiddleware, async (c) => {
-    try {
-      const user = c.get('user');
-      const body = await c.req.json();
-      
-      const { event, properties = {}, timestamp = new Date() } = body;
-      
-      if (!event) {
-        return c.json(createErrorResponse('VALIDATION_ERROR', 'Event name is required'), 400);
-      }
+/**
+ * GET /analytics/summary
+ * Get user activity summary
+ */
+app.get('/summary', honoAuthMiddleware, async (c: Context) => {
+  try {
+    const user = c.get('user');
+    const analyticsService = new AnalyticsService();
+    
+    const summary = await analyticsService.getUserActivitySummary(user.uid);
 
-      // Store analytics event
-      const eventDoc = {
-        userId: user.uid,
-        event,
-        properties,
-        timestamp: new Date(timestamp),
-        userAgent: c.req.header('user-agent') || '',
-        ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || '',
-      };
-
-      await db.collection('analytics_events').add(eventDoc);
-
-      return c.json(createSuccessResponse({ message: 'Event tracked successfully' }));
-    } catch (error) {
-      logger.error('Failed to track event:', error);
-      return c.json(createErrorResponse('TRACKING_ERROR', 'Failed to track event'), 500);
+    if (!summary) {
+      return c.json(createSuccessResponse({
+        hasActivity: false,
+        message: 'No activity data found',
+      }));
     }
-  });
 
-  /**
-   * GET /usage-metrics
-   * Get detailed usage metrics
-   */
-  app.get('/usage-metrics', authMiddleware, async (c) => {
-    try {
-      const user = c.get('user');
-      const query = c.req.query();
-      
-      const timeRange = query.timeRange || '30d'; // 7d, 30d, 90d, 1y
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      // Calculate start date based on time range
-      switch (timeRange) {
-        case '7d':
-          startDate.setDate(endDate.getDate() - 7);
-          break;
-        case '30d':
-          startDate.setDate(endDate.getDate() - 30);
-          break;
-        case '90d':
-          startDate.setDate(endDate.getDate() - 90);
-          break;
-        case '1y':
-          startDate.setFullYear(endDate.getFullYear() - 1);
-          break;
-        default:
-          startDate.setDate(endDate.getDate() - 30);
-      }
+    return c.json(createSuccessResponse({
+      hasActivity: true,
+      summary,
+    }));
+  } catch (error) {
+    logger.error('Analytics summary error:', error);
+    return c.json(createErrorResponse('ANALYTICS_ERROR', 'Failed to get activity summary'), 500);
+  }
+});
 
-      // Get analytics events for the time range
-      const eventsSnapshot = await db.collection('analytics_events')
-        .where('userId', '==', user.uid)
-        .where('timestamp', '>=', startDate)
-        .where('timestamp', '<=', endDate)
-        .orderBy('timestamp', 'desc')
-        .get();
+/**
+ * GET /analytics/dashboard
+ * Get dashboard analytics data for user
+ */
+app.get('/dashboard', honoAuthMiddleware, async (c: Context) => {
+  try {
+    const user = c.get('user');
+    const analyticsService = new AnalyticsService();
 
-      const events = eventsSnapshot.docs.map(doc => doc.data());
+    const [summary, timeline, generationStats] = await Promise.all([
+      analyticsService.getUserActivitySummary(user.uid),
+      analyticsService.getUserActivityTimeline(user.uid, (() => {
+        const date = new Date();
+        date.setDate(date.getDate() - 7);
+        return date;
+      })(), new Date(), 20),
+      analyticsService.getUserGenerationStats(user.uid),
+    ]);
 
-      // Aggregate metrics
-      const metrics = {
-        totalEvents: events.length,
-        eventTypes: {} as Record<string, number>,
-        dailyActivity: {} as Record<string, number>,
-        topEvents: [] as Array<{ event: string; count: number }>,
-      };
+    return c.json(createSuccessResponse({
+      summary,
+      recentActivity: timeline,
+      generationStats,
+      dashboardGenerated: new Date().toISOString(),
+    }));
+  } catch (error) {
+    logger.error('Analytics dashboard error:', error);
+    return c.json(createErrorResponse('ANALYTICS_ERROR', 'Failed to get dashboard data'), 500);
+  }
+});
 
-      // Count events by type
-      events.forEach(event => {
-        const eventName = event.event;
-        metrics.eventTypes[eventName] = (metrics.eventTypes[eventName] || 0) + 1;
-
-        // Daily activity
-        const dateKey = event.timestamp.toDate().toISOString().split('T')[0];
-        metrics.dailyActivity[dateKey] = (metrics.dailyActivity[dateKey] || 0) + 1;
-      });
-
-      // Get top events
-      metrics.topEvents = Object.entries(metrics.eventTypes)
-        .map(([event, count]) => ({ event, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10);
-
-      return c.json(createSuccessResponse(metrics));
-    } catch (error) {
-      logger.error('Failed to get usage metrics:', error);
-      return c.json(createErrorResponse('METRICS_ERROR', 'Failed to get usage metrics'), 500);
-    }
-  });
-
-  return app;
-};
+export default app;
