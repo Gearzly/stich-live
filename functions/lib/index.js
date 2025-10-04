@@ -37,7 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.health = exports.onUserCreated = exports.onAppDeleted = exports.onAppUpdated = exports.onAppCreated = exports.onGenerationUpdated = exports.onGenerationCreated = exports.onFileDeleted = exports.onFileUploaded = exports.generateUsageReports = exports.updateSearchIndex = exports.cleanupOldGenerations = exports.dailyAnalytics = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.analytics = exports.files = exports.users = exports.apps = exports.ai = exports.auth = exports.api = void 0;
+exports.health = exports.onUserCreated = exports.onAppDeleted = exports.onAppUpdated = exports.onAppCreated = exports.onGenerationUpdated = exports.onGenerationCreated = exports.onFileDeleted = exports.onFileUploaded = exports.generateUsageReports = exports.updateSearchIndex = exports.cleanupOldGenerations = exports.dailyAnalytics = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.github = exports.realtime = exports.analytics = exports.files = exports.users = exports.apps = exports.ai = exports.auth = exports.api = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const admin = __importStar(require("firebase-admin"));
@@ -57,6 +57,8 @@ const apps_1 = require("./api/apps");
 const users_1 = require("./api/users");
 const files_1 = require("./api/files");
 const analytics_1 = require("./api/analytics");
+const realtime_1 = require("./api/realtime");
+const github_1 = require("./api/github");
 const app_1 = require("./app");
 const firebase_adapter_1 = require("./utils/firebase-adapter");
 // ==========================================
@@ -123,6 +125,24 @@ exports.analytics = (0, https_1.onRequest)({
     cors: true,
     maxInstances: 10,
 }, (0, firebase_adapter_1.honoToFirebase)((0, analytics_1.createAnalyticsApp)()));
+/**
+ * Realtime API
+ * Handles real-time collaboration and editing
+ */
+exports.realtime = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 30,
+    memory: '1GiB',
+}, (0, firebase_adapter_1.honoToFirebase)((0, realtime_1.createRealtimeApp)()));
+/**
+ * GitHub API
+ * Handles GitHub OAuth integration and repository operations
+ */
+exports.github = (0, https_1.onRequest)({
+    cors: true,
+    maxInstances: 20,
+    memory: '512MiB',
+}, (0, firebase_adapter_1.honoToFirebase)((0, github_1.createGitHubApp)()));
 // ==========================================
 // Callable Functions (Direct Client Calls)
 // ==========================================

@@ -25,6 +25,8 @@ import { createAppsApp } from './api/apps';
 import { createUsersApp } from './api/users';
 import { createFilesApp } from './api/files';
 import { createAnalyticsApp } from './api/analytics';
+import { createRealtimeApp } from './api/realtime';
+import { createGitHubApp } from './api/github';
 import { createMainApp } from './app';
 import { honoToFirebase } from './utils/firebase-adapter';
 
@@ -99,6 +101,27 @@ export const analytics = onRequest({
   cors: true,
   maxInstances: 10,
 }, honoToFirebase(createAnalyticsApp() as any));
+
+/**
+ * Realtime API
+ * Handles real-time collaboration and editing
+ */
+export const realtime = onRequest({
+  cors: true,
+  maxInstances: 30,
+  memory: '1GiB',
+}, honoToFirebase(createRealtimeApp() as any));
+
+/**
+ * GitHub API
+ * Handles GitHub OAuth integration and repository operations
+ */
+export const github = onRequest({
+  cors: true,
+  maxInstances: 20,
+  memory: '512MiB',
+}, honoToFirebase(createGitHubApp() as any));
+
 // ==========================================
 // Callable Functions (Direct Client Calls)
 // ==========================================
