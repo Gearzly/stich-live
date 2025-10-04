@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { 
   User as FirebaseUser,
   onAuthStateChanged,
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           id: result.user.uid,
           email: result.user.email!,
           displayName: result.user.displayName || '',
-          photoURL: result.user.photoURL || undefined,
+          ...(result.user.photoURL && { photoURL: result.user.photoURL }),
           subscription: 'free',
           createdAt: new Date(),
           updatedAt: new Date()

@@ -5,18 +5,6 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger } from 'firebase-functions';
-import * as cors from 'cors';
-import * as helmet from 'helmet';
-import * as compression from 'compression';
-import { config } from '../config';
-
-/**
- * Common Middleware
- * Shared middleware functions for all API routes
- */
-
-import { Request, Response, NextFunction } from 'express';
-import { logger } from 'firebase-functions';
 import { config } from '../config';
 
 /**
@@ -309,7 +297,6 @@ const parseSize = (size: string): number => {
 export default {
   corsMiddleware,
   securityMiddleware,
-  compressionMiddleware,
   rateLimitMiddleware,
   aiRateLimitMiddleware,
   loggingMiddleware,

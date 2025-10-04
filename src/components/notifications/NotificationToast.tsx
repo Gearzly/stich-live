@@ -3,7 +3,7 @@
  * Custom toast component for the notification system
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '../../lib/utils';
 

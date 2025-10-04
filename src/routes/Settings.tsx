@@ -3,7 +3,8 @@
  * Comprehensive settings and preferences interface
  */
 
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
@@ -14,7 +15,7 @@ import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
 import { useSettings } from '../contexts/SettingsContext';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext'; // Not currently used
 import { useNotifications } from '../contexts/NotificationContext';
 import { 
   Palette, 
@@ -26,12 +27,14 @@ import {
   RotateCcw,
   Moon,
   Sun,
-  Monitor
+  Monitor,
+  Code,
+  Brain
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { settings, updateSetting, updateSettings, resetSettings, exportSettings, importSettings, loading } = useSettings();
-  const { user } = useAuth();
+  const { settings, updateSetting, resetSettings, exportSettings, importSettings, loading } = useSettings();
+  // const { user } = useAuth(); // Not currently used
   const { showSuccess, showError } = useNotifications();
   const [importFile, setImportFile] = useState<File | null>(null);
 

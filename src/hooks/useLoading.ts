@@ -20,8 +20,8 @@ export function useLoadingState(initialLoading: boolean = false) {
   const startLoading = useCallback((message?: string, stage?: string) => {
     setLoadingState({
       isLoading: true,
-      message,
-      stage,
+      ...(message && { message }),
+      ...(stage && { stage }),
       progress: 0,
     });
   }, []);
@@ -78,9 +78,9 @@ export function useMultipleLoadingStates() {
       ...prev,
       [key]: {
         isLoading: loading,
-        message: options?.message,
-        stage: options?.stage,
-        progress: options?.progress,
+        ...(options?.message && { message: options.message }),
+        ...(options?.stage && { stage: options.stage }),
+        ...(options?.progress !== undefined && { progress: options.progress }),
       },
     }));
   }, []);

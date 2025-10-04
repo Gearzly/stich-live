@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Clock, TrendingUp, Filter, ArrowRight } from 'lucide-react';
+import { Search, X, Clock, TrendingUp, /* Filter, */ ArrowRight } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

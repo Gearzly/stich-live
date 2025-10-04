@@ -149,7 +149,7 @@ class FirebaseMessagingService {
     }
   }
 
-  onMessage(callback: (payload: any) => void): (() => void) | null {
+  onMessage(_callback: (payload: any) => void): (() => void) | null {
     if (!this.messaging) {
       return null;
     }
@@ -177,8 +177,8 @@ class FirebaseMessagingService {
       const notification = new Notification(data.title, {
         body: data.body,
         icon: data.icon || '/favicon.ico',
-        badge: data.badge,
-        data: data.data,
+        ...(data.badge && { badge: data.badge }),
+        ...(data.data && { data: data.data }),
         tag: 'stich-notification',
       });
 

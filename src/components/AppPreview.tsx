@@ -5,8 +5,8 @@ import {
   Tablet, 
   Smartphone, 
   Eye, 
-  EyeOff, 
-  Settings, 
+  // EyeOff, 
+  // Settings, 
   Maximize2, 
   Minimize2,
   RotateCcw,
@@ -14,31 +14,31 @@ import {
   Share2,
   ExternalLink,
   Code,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
+  // Play,
+  // Pause,
+  // Volume2,
+  // VolumeX,
   Loader2,
   AlertCircle,
-  CheckCircle,
+  // CheckCircle,
   Edit3,
   Save,
   X,
   ArrowLeft,
-  ArrowRight,
+  // ArrowRight,
   Zap,
-  Globe,
+  // Globe,
   GitBranch,
   Clock,
-  Users
+  // Users
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Input } from '../components/ui/input';
+// import { Card } from '../components/ui/card';
+// import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
-import { useAuth } from '../hooks/useAuth';
+// import { useAuth } from '../hooks/useAuth';
 import { ApplicationService, type Application } from '../services/application/ApplicationService';
-import { StorageService } from '../services/storage/StorageService';
+// import { StorageService } from '../services/storage/StorageService';
 import { toast } from '../lib/toast';
 
 type PreviewMode = 'desktop' | 'tablet' | 'mobile';
@@ -68,7 +68,7 @@ const AppPreview: React.FC<AppPreviewProps> = ({
   showToolbar = true,
   allowEditing = true
 }) => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [application, setApplication] = useState<Application | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>(initialMode);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
@@ -93,7 +93,7 @@ const AppPreview: React.FC<AppPreviewProps> = ({
   const refreshIntervalRef = useRef<NodeJS.Timeout>();
 
   const applicationService = new ApplicationService();
-  const storageService = new StorageService();
+  // const storageService = new StorageService();
 
   useEffect(() => {
     if (applicationId) {
@@ -142,16 +142,19 @@ const AppPreview: React.FC<AppPreviewProps> = ({
       const app = await applicationService.getApplication(applicationId);
       setApplication(app);
       
-      if (app.previewUrl) {
+      if (app && app.previewUrl) {
         setPreviewUrl(app.previewUrl);
-      } else if (app.deploymentUrl) {
+      } else if (app && app.deploymentUrl) {
         setPreviewUrl(app.deploymentUrl);
       } else {
         // Generate preview URL for sandbox environment
         setPreviewUrl(`/api/preview/${applicationId}`);
       }
       
-      setLastUpdated(app.updatedAt.toDate ? app.updatedAt.toDate() : new Date(app.updatedAt));
+      if (app && app.updatedAt) {
+        const updatedAt = (app.updatedAt as any).toDate ? (app.updatedAt as any).toDate() : new Date(app.updatedAt);
+        setLastUpdated(updatedAt);
+      }
     } catch (error) {
       console.error('Error loading application:', error);
       toast.error('Failed to load application preview');
@@ -209,14 +212,14 @@ const AppPreview: React.FC<AppPreviewProps> = ({
     // Set up console capture for iframe
     if (iframeRef.current && settings.showConsole) {
       try {
-        const iframeWindow = iframeRef.current.contentWindow;
-        if (iframeWindow) {
+        const iframeWindow = iframeRef.current.contentWindow as any;
+        if (iframeWindow && iframeWindow.console) {
           // Capture console logs from iframe (sandbox environment only)
           const originalLog = iframeWindow.console.log;
           const originalError = iframeWindow.console.error;
           const originalWarn = iframeWindow.console.warn;
 
-          iframeWindow.console.log = (...args) => {
+          iframeWindow.console.log = (...args: any[]) => {
             originalLog.apply(iframeWindow.console, args);
             setConsoleOutput(prev => [...prev, {
               type: 'log',
@@ -225,7 +228,7 @@ const AppPreview: React.FC<AppPreviewProps> = ({
             }]);
           };
 
-          iframeWindow.console.error = (...args) => {
+          iframeWindow.console.error = (...args: any[]) => {
             originalError.apply(iframeWindow.console, args);
             setConsoleOutput(prev => [...prev, {
               type: 'error',
@@ -234,7 +237,7 @@ const AppPreview: React.FC<AppPreviewProps> = ({
             }]);
           };
 
-          iframeWindow.console.warn = (...args) => {
+          iframeWindow.console.warn = (...args: any[]) => {
             originalWarn.apply(iframeWindow.console, args);
             setConsoleOutput(prev => [...prev, {
               type: 'warn',

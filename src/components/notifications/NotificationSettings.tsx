@@ -3,7 +3,8 @@
  * Allows users to manage their notification preferences
  */
 
-import React, { useState, useEffect } from 'react';
+// import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, BellOff, Smartphone, Monitor, Mail } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Switch } from '../ui/switch';

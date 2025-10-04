@@ -3,13 +3,14 @@
  * Demonstrates various loading states and error handling
  */
 
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   RefreshCw, 
-  AlertCircle, 
-  CheckCircle, 
+  // AlertCircle, 
+  // CheckCircle, 
   Upload, 
-  Download,
+  // Download,
   Zap,
   Settings
 } from 'lucide-react';
@@ -23,8 +24,8 @@ import {
   SkeletonCard, 
   SkeletonTable, 
   SkeletonList,
-  PageLoading,
-  InlineLoading
+  // PageLoading,
+  // InlineLoading
 } from '../ui/loading';
 import { 
   EmptyState, 
@@ -38,7 +39,7 @@ import {
   FeedbackCard
 } from '../ui/feedback';
 import { useAsyncOperation, useFormSubmission, useRetryableOperation } from '../../hooks/useError';
-import { useLoadingState, useMultipleLoadingStates, useUploadProgress } from '../../hooks/useLoading';
+import { useLoadingState, /* useMultipleLoadingStates, */ useUploadProgress } from '../../hooks/useLoading';
 import { ErrorBoundary } from '../error/ErrorBoundary';
 
 export function LoadingAndErrorDemo() {
@@ -50,7 +51,7 @@ export function LoadingAndErrorDemo() {
   const { submitForm, loading: formLoading, error: formError } = useFormSubmission();
   const { executeWithRetry, loading: retryLoading, retryCount } = useRetryableOperation(3);
   const loadingState = useLoadingState();
-  const multipleLoading = useMultipleLoadingStates();
+  // const multipleLoading = useMultipleLoadingStates();
   const uploadProgress = useUploadProgress();
 
   // Demo functions
@@ -182,7 +183,7 @@ export function LoadingAndErrorDemo() {
             <CardContent>
               <AILoading 
                 stage="Generating your app..." 
-                progress={loadingState.progress}
+                progress={loadingState.progress ?? 0}
               />
             </CardContent>
           </Card>

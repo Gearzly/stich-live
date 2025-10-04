@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, 
-  Filter, 
+  // Filter, 
   SlidersHorizontal, 
   Grid3X3, 
   List, 
@@ -16,13 +16,13 @@ import {
   Heart, 
   Calendar,
   User,
-  Tag,
-  ChevronDown,
+  // Tag,
+  // ChevronDown,
   X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
+// import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';

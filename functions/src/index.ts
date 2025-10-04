@@ -28,14 +28,14 @@ import { createFilesApp } from './api/files';
 import { createAnalyticsApp } from './api/analytics';
 
 // Import callable functions
-import { generateApplication } from './services/ai/generation';
-import { deployApplication } from './services/deployment/deploy';
-import { processFileUpload } from './services/storage/files';
+// import { generateApplication } from './services/ai/generation';
+// import { deployApplication } from './services/deployment/deploy';
+// import { processFileUpload } from './services/storage/files';
 
 // Import Firestore triggers
-import { onApplicationCreated, onApplicationUpdated } from './triggers/applications';
-import { onUserCreated, onUserUpdated } from './triggers/users';
-import { onGenerationUpdated } from './triggers/generations';
+// import { onApplicationCreated, onApplicationUpdated } from './triggers/applications';
+// import { onUserCreated, onUserUpdated } from './triggers/users';
+// import { onGenerationUpdated } from './triggers/generations';
 
 // ==========================================
 // HTTP Functions (REST API)
@@ -106,30 +106,30 @@ export const analytics = onRequest({
  * Generate Application (Callable)
  * Main AI generation function for creating applications
  */
-export const generateApp = onCall({
-  maxInstances: 10,
-  memory: '2GiB',
-  timeoutSeconds: 540,
-}, generateApplication);
+// export const generateApp = onCall({
+//   maxInstances: 10,
+//   memory: '2GiB',
+//   timeoutSeconds: 540,
+// }, generateApplication);
 
 /**
  * Deploy Application (Callable)
  * Handles application deployment to hosting
  */
-export const deployApp = onCall({
-  maxInstances: 10,
-  memory: '1GiB',
-  timeoutSeconds: 300,
-}, deployApplication);
+// export const deployApp = onCall({
+//   maxInstances: 10,
+//   memory: '1GiB',
+//   timeoutSeconds: 300,
+// }, deployApplication);
 
 /**
  * Process File Upload (Callable)
  * Handles file processing and validation
  */
-export const processFile = onCall({
-  maxInstances: 20,
-  memory: '1GiB',
-}, processFileUpload);
+// export const processFile = onCall({
+//   maxInstances: 20,
+//   memory: '1GiB',
+// }, processFileUpload);
 
 // ==========================================
 // Firestore Triggers
@@ -139,46 +139,46 @@ export const processFile = onCall({
  * Application Creation Trigger
  * Runs when a new application is created
  */
-export const onAppCreated = onDocumentCreated(
-  'applications/{applicationId}',
-  onApplicationCreated
-);
+// export const onAppCreated = onDocumentCreated(
+//   'applications/{applicationId}',
+//   onApplicationCreated
+// );
 
 /**
  * Application Update Trigger
  * Runs when an application is updated
  */
-export const onAppUpdated = onDocumentUpdated(
-  'applications/{applicationId}',
-  onApplicationUpdated
-);
+// export const onAppUpdated = onDocumentUpdated(
+//   'applications/{applicationId}',
+//   onApplicationUpdated
+// );
 
 /**
  * User Creation Trigger
  * Runs when a new user is created
  */
-export const onUserCreated = onDocumentCreated(
-  'users/{userId}',
-  onUserCreated
-);
+// export const onUserCreated = onDocumentCreated(
+//   'users/{userId}',
+//   onUserCreated
+// );
 
 /**
  * User Update Trigger
  * Runs when a user is updated
  */
-export const onUserUpdated = onDocumentUpdated(
-  'users/{userId}',
-  onUserUpdated
-);
+// export const onUserUpdated = onDocumentUpdated(
+//   'users/{userId}',
+//   onUserUpdated
+// );
 
 /**
  * Generation Update Trigger
  * Runs when a generation process is updated
  */
-export const onGenerationUpdated = onDocumentUpdated(
-  'generations/{generationId}',
-  onGenerationUpdated
-);
+// export const onGenerationUpdated = onDocumentUpdated(
+//   'generations/{generationId}',
+//   onGenerationUpdated
+// );
 
 // ==========================================
 // Scheduled Functions

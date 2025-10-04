@@ -3,7 +3,8 @@
  * Demonstrates the notification system features
  */
 
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
+import { useState } from 'react';
 import { Bell, Wifi, Settings, Play } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';

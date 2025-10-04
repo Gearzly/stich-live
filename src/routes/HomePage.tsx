@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -16,14 +15,14 @@ import {
   ChevronRight,
   Sparkles,
   Brain,
-  Clock,
+  // Clock,
   Palette
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 
-const HomePage: React.FC = () => {
+const HomePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
       {/* Hero Section */}

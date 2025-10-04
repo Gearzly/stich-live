@@ -3,7 +3,7 @@
  * Shows real-time connection status to users
  */
 
-import React from 'react';
+// import React from 'react';
 import { Wifi, WifiOff, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useConnectionStatus } from '../../hooks/useRealtime';

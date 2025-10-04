@@ -87,7 +87,7 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
       setConnectionState(webSocketService.connectionState);
     });
 
-    const unsubscribeError = webSocketService.onError((error) => {
+    const unsubscribeError = webSocketService.onError((_error) => {
       setError('Connection error occurred');
       addNotification({
         type: 'warning',

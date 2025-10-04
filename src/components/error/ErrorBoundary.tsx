@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error details
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     
@@ -60,6 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // this.logErrorToService(error, errorInfo);
   }
 
+  /*
   private logErrorToService = async (error: Error, errorInfo: ErrorInfo) => {
     try {
       // Send error to backend logging service
@@ -82,6 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
       console.error('Failed to log error to service:', loggingError);
     }
   };
+  */
 
   private handleRetry = () => {
     this.setState({
@@ -107,7 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
     window.open(mailtoLink);
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       // Custom fallback UI
       if (this.props.fallback) {
@@ -229,7 +231,7 @@ export function withErrorBoundary<P extends object>(
 ) {
   return function WrappedComponent(props: P) {
     return (
-      <ErrorBoundary fallback={fallback} onError={onError}>
+      <ErrorBoundary fallback={fallback} {...(onError && { onError })}>
         <Component {...props} />
       </ErrorBoundary>
     );

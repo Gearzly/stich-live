@@ -8,10 +8,8 @@ import {
   Shield, 
   Lock, 
   Eye, 
-  EyeOff, 
   Download, 
   Trash2, 
-  AlertTriangle,
   CheckCircle,
   Info,
   Globe,
@@ -21,8 +19,8 @@ import {
   UserCheck,
   Settings,
   FileText,
-  Clock,
-  Share2
+  Share2,
+  Activity
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -68,7 +66,7 @@ interface PrivacyRight {
 }
 
 export default function PrivacySettingsPage() {
-  const { showSuccess, showError } = useNotifications();
+  const { showSuccess } = useNotifications();
   const [activeTab, setActiveTab] = useState('overview');
   const [settings, setSettings] = useState<PrivacySetting[]>([
     {

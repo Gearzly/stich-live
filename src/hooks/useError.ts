@@ -136,13 +136,13 @@ export function useFormSubmission<T = any>() {
       errorMessage,
       onSuccess,
       onError,
-      resetOnSuccess = false,
+      // resetOnSuccess = false, // Not currently used
     } = options || {};
 
     const result = await execute(
       () => submitFunction(formData),
       {
-        errorMessage,
+        ...(errorMessage && { errorMessage }),
         onSuccess: (data) => {
           if (successMessage) {
             showSuccess('Success', successMessage);
@@ -151,7 +151,7 @@ export function useFormSubmission<T = any>() {
             onSuccess(data);
           }
         },
-        onError,
+        ...(onError && { onError }),
       }
     );
 
@@ -194,8 +194,8 @@ export function useRetryableOperation<T = any>(maxRetries: number = 3) {
       try {
         const result = await execute(operation, {
           showErrorNotification: attempts === maxRetries ? showErrorNotification : false,
-          errorMessage,
-          onSuccess,
+          ...(errorMessage && { errorMessage }),
+          ...(onSuccess && { onSuccess }),
           onError: (error) => {
             setRetryCount(attempts);
             if (onError) {
