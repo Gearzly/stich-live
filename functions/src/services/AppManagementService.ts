@@ -1,5 +1,5 @@
 import { BaseService } from './BaseService';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 
 // Application data types
@@ -98,6 +98,8 @@ export interface AppFilters {
   isPublic?: boolean;
   isFavorite?: boolean;
   search?: string;
+  sortBy?: 'createdAt' | 'views' | 'likes' | 'name';
+  sortOrder?: 'asc' | 'desc';
 }
 
 /**
@@ -252,11 +254,24 @@ export class AppManagementService extends BaseService {
     filters: AppFilters = {}, 
     limit: number = 20, 
     offset: number = 0
-  ): Promise<{ applications: Application[]; total: number }> {
+  ): Promise<{ applications: Application[]; total: number; hasMore: boolean }> {
     try {
       let query = this.db.collection('applications')
-        .where('isPublic', '==', true)
-        .orderBy('analytics.views', 'desc');
+        .where('isPublic', '==', true);
+
+      // Apply sorting
+      const sortBy = filters.sortBy || 'createdAt';
+      const sortOrder = filters.sortOrder || 'desc';
+      
+      if (sortBy === 'views') {
+        query = query.orderBy('analytics.views', sortOrder);
+      } else if (sortBy === 'likes') {
+        query = query.orderBy('analytics.likes', sortOrder);
+      } else if (sortBy === 'name') {
+        query = query.orderBy('name', sortOrder);
+      } else {
+        query = query.orderBy('createdAt', sortOrder);
+      }
 
       // Apply filters
       if (filters.framework) {
@@ -268,7 +283,7 @@ export class AppManagementService extends BaseService {
       }
 
       const snapshot = await query.limit(limit).offset(offset).get();
-      let applications = snapshot.docs.map(doc => doc.data() as Application);
+      let applications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
 
       // Apply client-side filters
       if (filters.search) {
@@ -294,6 +309,7 @@ export class AppManagementService extends BaseService {
       return {
         applications,
         total: totalSnapshot.size,
+        hasMore: offset + applications.length < totalSnapshot.size
       };
     } catch (error) {
       this.logger.error('Failed to get public applications', { error });
@@ -372,6 +388,228 @@ export class AppManagementService extends BaseService {
     } catch (error) {
       this.logger.error('Failed to toggle favorite', { appId, userId, error });
       throw new Error('Failed to toggle favorite');
+    }
+  }
+
+  /**
+   * Get user's favorite applications
+   */
+  async getUserFavorites(userId: string, limit: number = 20, offset: number = 0): Promise<{
+    applications: Application[];
+    total: number;
+    hasMore: boolean;
+  }> {
+    try {
+      const query = this.db.collection('applications')
+        .where('createdBy', '==', userId)
+        .where('isFavorite', '==', true)
+        .orderBy('updatedAt', 'desc')
+        .limit(limit)
+        .offset(offset);
+
+      const snapshot = await query.get();
+      const applications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+
+      // Get total count
+      const countQuery = this.db.collection('applications')
+        .where('createdBy', '==', userId)
+        .where('isFavorite', '==', true);
+      const countSnapshot = await countQuery.get();
+      const total = countSnapshot.size;
+
+      return {
+        applications,
+        total,
+        hasMore: offset + applications.length < total
+      };
+    } catch (error) {
+      this.logger.error('Failed to get user favorites', { userId, error });
+      throw new Error('Failed to get favorite applications');
+    }
+  }
+
+  /**
+   * Toggle star/like status for an application
+   */
+  async toggleStar(appId: string, userId: string): Promise<{ isStarred: boolean; totalStars: number }> {
+    try {
+      // Check if app exists and is public or user owns it
+      const app = await this.getApplicationById(appId);
+      if (!app || (!app.isPublic && app.createdBy !== userId)) {
+        throw new Error('Application not found or access denied');
+      }
+
+      // Check if user has already starred this app
+      const starRef = this.db.collection('applications').doc(appId).collection('stars').doc(userId);
+      const starDoc = await starRef.get();
+      
+      const isCurrentlyStarred = starDoc.exists;
+      const newStarredStatus = !isCurrentlyStarred;
+
+      await this.db.runTransaction(async (transaction) => {
+        if (newStarredStatus) {
+          // Add star
+          transaction.set(starRef, {
+            userId,
+            createdAt: new Date()
+          });
+          // Increment analytics
+          transaction.update(this.db.collection('applications').doc(appId), {
+            'analytics.likes': FieldValue.increment(1)
+          });
+        } else {
+          // Remove star
+          transaction.delete(starRef);
+          // Decrement analytics
+          transaction.update(this.db.collection('applications').doc(appId), {
+            'analytics.likes': FieldValue.increment(-1)
+          });
+        }
+      });
+
+      // Get updated star count
+      const starsSnapshot = await this.db.collection('applications').doc(appId).collection('stars').get();
+      const totalStars = starsSnapshot.size;
+
+      this.logger.info('Application star status toggled', { appId, userId, isStarred: newStarredStatus, totalStars });
+      
+      return {
+        isStarred: newStarredStatus,
+        totalStars
+      };
+    } catch (error) {
+      this.logger.error('Failed to toggle star', { appId, userId, error });
+      throw new Error('Failed to toggle star');
+    }
+  }
+
+  /**
+   * Fork an application (create a copy for the user)
+   */
+  async forkApplication(
+    appId: string, 
+    userId: string, 
+    forkData?: { name?: string; description?: string; isPublic?: boolean }
+  ): Promise<Application> {
+    try {
+      // Get the original app
+      const originalApp = await this.getApplicationById(appId);
+      if (!originalApp) {
+        throw new Error('Application not found');
+      }
+
+      // Check if app is public or user owns it
+      if (!originalApp.isPublic && originalApp.createdBy !== userId) {
+        throw new Error('Cannot fork private application');
+      }
+
+      // Get app files
+      const originalFiles = await this.getApplicationFiles(appId);
+
+      // Create forked app data
+      const now = new Date();
+      const forkedAppData: Omit<Application, 'id'> = {
+        name: forkData?.name || `${originalApp.name} (Fork)`,
+        description: forkData?.description || `Forked from ${originalApp.name}: ${originalApp.description}`,
+        category: originalApp.category,
+        framework: originalApp.framework,
+        status: 'draft',
+        isPublic: forkData?.isPublic || false,
+        isFavorite: false,
+        tags: [...originalApp.tags, 'forked'],
+        
+        repositoryUrl: undefined, // Reset deployment info
+        deploymentUrl: undefined,
+        previewUrl: undefined,
+        
+        generationSettings: {
+          ...originalApp.generationSettings,
+          prompt: `Fork of: ${originalApp.generationSettings.prompt}`,
+        },
+        
+        files: originalFiles,
+        fileStructure: originalApp.fileStructure,
+        
+        analytics: {
+          views: 0,
+          likes: 0,
+          forks: 0,
+          shares: 0,
+        },
+        
+        createdAt: now,
+        updatedAt: now,
+        createdBy: userId,
+        updatedBy: userId,
+      };
+
+      // Create the forked app
+      const docRef = this.db.collection('applications').doc();
+      await docRef.set(forkedAppData);
+
+      // Copy files to new app
+      if (originalFiles.length > 0) {
+        const batch = this.db.batch();
+        originalFiles.forEach(file => {
+          const newFileRef = docRef.collection('files').doc();
+          batch.set(newFileRef, {
+            ...file,
+            id: newFileRef.id,
+            lastModified: now,
+          });
+        });
+        await batch.commit();
+      }
+
+      // Increment fork count on original app
+      await this.incrementAnalytics(appId, 'forks');
+
+      const forkedApp: Application = {
+        id: docRef.id,
+        ...forkedAppData,
+      };
+
+      this.logger.info('Application forked successfully', { 
+        originalAppId: appId, 
+        forkedAppId: docRef.id, 
+        userId 
+      });
+
+      return forkedApp;
+    } catch (error) {
+      this.logger.error('Failed to fork application', { appId, userId, error });
+      throw new Error('Failed to fork application');
+    }
+  }
+
+  /**
+   * Update application visibility settings
+   */
+  async updateAppVisibility(
+    appId: string, 
+    userId: string, 
+    visibilityData: { isPublic: boolean }
+  ): Promise<void> {
+    try {
+      const app = await this.getApplicationById(appId);
+      if (!app || app.createdBy !== userId) {
+        throw new Error('Application not found or access denied');
+      }
+
+      await this.db.collection('applications').doc(appId).update({
+        isPublic: visibilityData.isPublic,
+        updatedAt: new Date(),
+        updatedBy: userId,
+      });
+
+      this.logger.info('Application visibility updated', { 
+        appId, 
+        userId, 
+        isPublic: visibilityData.isPublic 
+      });
+    } catch (error) {
+      this.logger.error('Failed to update app visibility', { appId, userId, error });
+      throw new Error('Failed to update application visibility');
     }
   }
 

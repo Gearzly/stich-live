@@ -37,7 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.health = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.analytics = exports.files = exports.users = exports.apps = exports.ai = exports.auth = exports.api = void 0;
+exports.health = exports.onUserCreated = exports.onAppDeleted = exports.onAppUpdated = exports.onAppCreated = exports.onGenerationUpdated = exports.onGenerationCreated = exports.onFileDeleted = exports.onFileUploaded = exports.generateUsageReports = exports.updateSearchIndex = exports.cleanupOldGenerations = exports.dailyAnalytics = exports.cancelGeneration = exports.getGenerationStatus = exports.deployApp = exports.generateApp = exports.analytics = exports.files = exports.users = exports.apps = exports.ai = exports.auth = exports.api = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const v2_1 = require("firebase-functions/v2");
 const admin = __importStar(require("firebase-admin"));
@@ -123,6 +123,7 @@ exports.analytics = (0, https_1.onRequest)({
     cors: true,
     maxInstances: 10,
 }, (0, firebase_adapter_1.honoToFirebase)((0, analytics_1.createAnalyticsApp)()));
+// ==========================================
 // Callable Functions (Direct Client Calls)
 // ==========================================
 // Import and export callable functions
@@ -131,6 +132,30 @@ Object.defineProperty(exports, "generateApp", { enumerable: true, get: function 
 Object.defineProperty(exports, "deployApp", { enumerable: true, get: function () { return callable_1.deployApp; } });
 Object.defineProperty(exports, "getGenerationStatus", { enumerable: true, get: function () { return callable_1.getGenerationStatus; } });
 Object.defineProperty(exports, "cancelGeneration", { enumerable: true, get: function () { return callable_1.cancelGeneration; } });
+// ==========================================
+// Scheduled Functions (Cron Jobs)
+// ==========================================
+var scheduled_1 = require("./scheduled");
+Object.defineProperty(exports, "dailyAnalytics", { enumerable: true, get: function () { return scheduled_1.dailyAnalytics; } });
+Object.defineProperty(exports, "cleanupOldGenerations", { enumerable: true, get: function () { return scheduled_1.cleanupOldGenerations; } });
+Object.defineProperty(exports, "updateSearchIndex", { enumerable: true, get: function () { return scheduled_1.updateSearchIndex; } });
+Object.defineProperty(exports, "generateUsageReports", { enumerable: true, get: function () { return scheduled_1.generateUsageReports; } });
+// ==========================================
+// Storage Triggers (File Events)
+// ==========================================
+var storage_1 = require("./storage");
+Object.defineProperty(exports, "onFileUploaded", { enumerable: true, get: function () { return storage_1.onFileUploaded; } });
+Object.defineProperty(exports, "onFileDeleted", { enumerable: true, get: function () { return storage_1.onFileDeleted; } });
+// ==========================================
+// Firestore Triggers (Database Events)
+// ==========================================
+var triggers_1 = require("./triggers");
+Object.defineProperty(exports, "onGenerationCreated", { enumerable: true, get: function () { return triggers_1.onGenerationCreated; } });
+Object.defineProperty(exports, "onGenerationUpdated", { enumerable: true, get: function () { return triggers_1.onGenerationUpdated; } });
+Object.defineProperty(exports, "onAppCreated", { enumerable: true, get: function () { return triggers_1.onAppCreated; } });
+Object.defineProperty(exports, "onAppUpdated", { enumerable: true, get: function () { return triggers_1.onAppUpdated; } });
+Object.defineProperty(exports, "onAppDeleted", { enumerable: true, get: function () { return triggers_1.onAppDeleted; } });
+Object.defineProperty(exports, "onUserCreated", { enumerable: true, get: function () { return triggers_1.onUserCreated; } });
 // ==========================================
 // Health Check Function
 // ==========================================

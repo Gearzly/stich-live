@@ -2,7 +2,227 @@
 
 ## Project Overview
 
-**Stich Production** is a sophisticated AI-powered web application generator built on Vercel's platform with Firebase backend. The system enables users to describe an application and have AI generate, deploy, and host it instantly. This is a full-stack TypeScript application with React frontend and Firebase backend services.
+**Stich Production** is a sophisticated AI-powered web application generator built on Vercel's platform with Firebase backend. The system enables users to describe an application and have AI generate, deploy, and host it instantly. This is a full-stack TypeScript application with React frontend and Fireb### AI Integration Guidelines
+
+### Multi-Provider Support
+```typescript
+// Provider configuration
+const config = {
+  provider: 'openai' | 'anthropic' | 'google' | 'cerebras',
+  model: 'gpt-4o' | 'claude-3-5-sonnet' | 'gemini-pro',
+  // Provider-specific settings
+};
+
+// Usage in code generation
+const response = await aiService.generateCode(prompt, config);
+```
+
+### Code Generation Patterns
+- **Structured prompts** with clear context and requirements
+- **Iterative refinement** through review cycles
+- **Template-based generation** for consistent output formats
+- **Error recovery** with fallback providers and retry logic
+
+## Advanced Features Roadmap
+
+### Core Features Implementation Plan
+
+#### **Phase 1: MVP+ Features (High Priority)**
+
+**1. Advanced App Management**
+- Public apps listing with filtering and pagination
+- Favorites system for bookmarking apps  
+- Star/rating system for community engagement
+- App forking to create copies of public apps
+- Visibility controls (public/private/unlisted)
+- App categories and tags for organization
+
+**2. Code Generation WebSockets**
+- Real-time editing with live code updates
+- WebSocket endpoints for instant communication
+- Collaborative editing support
+- Agent connection management for persistent sessions
+
+**3. GitHub Integration**  
+- OAuth flow for GitHub authentication
+- Repository export to push generated apps to GitHub
+- Branch management and commit automation
+- Repository templates integration
+
+**4. Basic Analytics**
+- User activity tracking with timelines
+- Usage metrics and generation statistics
+- Performance analytics for AI calls
+
+#### **Phase 2: Growth Features**
+
+**5. Secrets Management**
+- API key storage with encryption
+- Environment variables management
+- BYOK (Bring Your Own Key) support
+- Secret templates for common configurations
+
+**6. Model Configuration**
+- AI provider settings per user
+- Custom model parameters (temperature, tokens, etc.)
+- Provider switching and fallback logic
+- Configuration testing and validation
+
+**7. Screenshot System**
+- Automated screenshot generation for app previews
+- Image optimization and CDN serving
+- Thumbnail creation for galleries
+- Preview image management
+
+**8. Search & Filtering**
+- Full-text search across apps and content
+- Advanced filters (category, framework, tags)
+- Search suggestions and autocomplete
+- Saved searches and bookmarks
+
+#### **Phase 3: Scale Features**
+
+**9. Custom Model Providers**
+- BYOK provider management for enterprise users
+- Custom endpoint configuration
+- Provider testing and validation
+- Usage analytics per provider
+
+**10. Advanced User Management**
+- Role-based access control (admin, user, enterprise)
+- User permissions and capabilities
+- Team/organization support
+- User onboarding flows
+
+**11. Real-time Chat System**
+- Chat interface for code generation
+- Message history and persistence
+- File attachments and context sharing
+- Chat rooms for collaboration
+
+**12. Notification System**
+- In-app notifications for updates
+- Email notifications for important events
+- Push notifications for mobile
+- Notification preferences management
+
+#### **Phase 4: Enterprise Features**
+
+**13. Rate Limiting & Quotas**
+- API rate limiting per user/endpoint
+- Usage quotas and billing integration
+- Fair usage policies enforcement
+- Quota monitoring and alerts
+
+**14. Audit Logging**
+- Comprehensive logging of all actions
+- Security event tracking
+- Compliance reporting capabilities
+- Log retention policies
+
+**15. Backup & Recovery**
+- Automated backups of user data
+- Point-in-time recovery capabilities
+- Data export functionality
+- Disaster recovery procedures
+
+**16. Error Tracking Integration**
+- Sentry integration for error monitoring
+- Error categorization and alerting
+- Performance monitoring
+- User feedback integration
+
+### Firebase-Specific Implementation Patterns
+
+#### **WebSocket Integration**
+```typescript
+// Real-time updates using Firebase Realtime Database
+import { getDatabase, ref, onValue } from 'firebase/database';
+
+const db = getDatabase();
+const chatRef = ref(db, `chats/${chatId}`);
+onValue(chatRef, (snapshot) => {
+  const data = snapshot.val();
+  // Handle real-time updates
+});
+```
+
+#### **Advanced Security Rules**
+```javascript
+// Firestore security rules for advanced features
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Role-based access control
+    match /apps/{appId} {
+      allow read: if resource.data.visibility == 'public' 
+        || request.auth != null && request.auth.uid == resource.data.userId
+        || hasRole('admin');
+      allow write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+    }
+    
+    // Secrets access control
+    match /users/{userId}/secrets/{secretId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+#### **Advanced Analytics Patterns**
+```typescript
+// Analytics service with Firebase Analytics
+import { logEvent, getAnalytics } from 'firebase/analytics';
+
+export class AdvancedAnalyticsService {
+  async trackAppGeneration(userId: string, appData: any) {
+    const analytics = getAnalytics();
+    logEvent(analytics, 'app_generated', {
+      user_id: userId,
+      framework: appData.framework,
+      ai_provider: appData.provider
+    });
+  }
+  
+  async getUserStats(userId: string) {
+    // Aggregate user statistics from Firestore
+    const userRef = doc(db, 'users', userId);
+    const statsQuery = query(
+      collection(db, 'apps'), 
+      where('userId', '==', userId)
+    );
+    // Implementation...
+  }
+}
+```
+
+#### **Secrets Management Architecture**
+```typescript
+// Encrypted secrets storage with Firebase Functions
+import { getAuth } from 'firebase-admin/auth';
+import CryptoJS from 'crypto-js';
+
+export class SecretsService {
+  async storeSecret(userId: string, key: string, value: string) {
+    const encryptedValue = CryptoJS.AES.encrypt(value, process.env.ENCRYPTION_KEY).toString();
+    await db.collection('users').doc(userId).collection('secrets').doc(key).set({
+      value: encryptedValue,
+      createdAt: FieldValue.serverTimestamp()
+    });
+  }
+  
+  async getSecret(userId: string, key: string) {
+    const doc = await db.collection('users').doc(userId).collection('secrets').doc(key).get();
+    if (doc.exists) {
+      const bytes = CryptoJS.AES.decrypt(doc.data().value, process.env.ENCRYPTION_KEY);
+      return bytes.toString(CryptoJS.enc.Utf8);
+    }
+    return null;
+  }
+}
+```.
 
 ### Key Architecture Components
 - **Frontend**: React 19.1.1 + Vite + TypeScript with modern UI components (Vercel)

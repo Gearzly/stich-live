@@ -80,3 +80,16 @@ Systematic approach to handling complex refactoring tasks by breaking them into 
 - Service reorganization tracked as separate todo items
 - Status updates after each completed task
 - Clear descriptions with specific error counts and file locations
+
+
+## Firebase-Native Advanced Features Architecture
+
+A comprehensive pattern for implementing enterprise-grade features using Firebase services instead of external infrastructure. This includes using Firestore for complex permission systems, Realtime Database for real-time collaboration, Firebase Storage for file management, and Firebase Functions for business logic. The pattern emphasizes encryption for sensitive data, role-based access control through custom claims, and leveraging Firebase's built-in scalability for advanced features.
+
+### Examples
+
+- Firebase Realtime Database for live chat and collaboration
+- Firestore security rules for role-based access control
+- Firebase Functions with encrypted secret storage
+- Firebase Analytics for comprehensive user tracking
+- honoToFirebase adapter for seamless function integration

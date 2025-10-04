@@ -99,6 +99,7 @@ export const analytics = onRequest({
   cors: true,
   maxInstances: 10,
 }, honoToFirebase(createAnalyticsApp() as any));
+// ==========================================
 // Callable Functions (Direct Client Calls)
 // ==========================================
 
@@ -109,6 +110,39 @@ export {
   getGenerationStatus, 
   cancelGeneration 
 } from './callable';
+
+// ==========================================
+// Scheduled Functions (Cron Jobs)
+// ==========================================
+
+export {
+  dailyAnalytics,
+  cleanupOldGenerations,
+  updateSearchIndex,
+  generateUsageReports
+} from './scheduled';
+
+// ==========================================
+// Storage Triggers (File Events)
+// ==========================================
+
+export {
+  onFileUploaded,
+  onFileDeleted
+} from './storage';
+
+// ==========================================
+// Firestore Triggers (Database Events)
+// ==========================================
+
+export {
+  onGenerationCreated,
+  onGenerationUpdated,
+  onAppCreated,
+  onAppUpdated,
+  onAppDeleted,
+  onUserCreated
+} from './triggers';
 
 // ==========================================
 // Health Check Function

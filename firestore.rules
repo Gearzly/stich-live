@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =====================================
+    // Applications Collection
+    // =====================================
+    match /applications/{appId} {
+      // Allow read if:
+      // 1. App is public, OR
+      // 2. User is authenticated and owns the app, OR
+      // 3. User has admin role
+      allow read: if resource.data.isPublic == true
+        || (request.auth != null && request.auth.uid == resource.data.createdBy)
+        || (request.auth != null && hasRole('admin'));
+        
+      // Allow create if user is authenticated
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.createdBy
+        && request.resource.data.keys().hasAll(['name', 'description', 'category', 'framework', 'createdBy', 'createdAt'])
+        && request.resource.data.createdAt == request.time;
+        
+      // Allow update if user owns the app
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.createdBy
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedAt == request.time;
+        
+      // Allow delete if user owns the app
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.createdBy;
+
+      // =====================================
+      // Application Stars Subcollection
+      // =====================================
+      match /stars/{starId} {
+        // Anyone can read stars (for counting)
+        allow read: if true;
+        
+        // Users can only create/delete their own stars
+        allow create, delete: if request.auth != null
+          && request.auth.uid == starId;
+      }
+      
+      // =====================================
+      // Application Files Subcollection
+      // =====================================
+      match /files/{fileId} {
+        // Allow read if:
+        // 1. Parent app is public, OR
+        // 2. User owns the parent app
+        allow read: if getParentApp().data.isPublic == true
+          || (request.auth != null && request.auth.uid == getParentApp().data.createdBy);
+          
+        // Allow write if user owns the parent app
+        allow write: if request.auth != null
+          && request.auth.uid == getParentApp().data.createdBy;
+      }
+    }
+
+    // =====================================
+    // Users Collection
+    // =====================================
+    match /users/{userId} {
+      // Users can read/write their own data
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+        
+      // Admins can read all user data
+      allow read: if request.auth != null
+        && hasRole('admin');
+
+      // =====================================
+      // User Secrets Subcollection
+      // =====================================
+      match /secrets/{secretId} {
+        // Users can only access their own secrets
+        allow read, write: if request.auth != null
+          && request.auth.uid == userId;
+      }
+      
+      // =====================================
+      // User Analytics Subcollection
+      // =====================================
+      match /analytics/{analyticsId} {
+        // Users can read their own analytics
+        allow read: if request.auth != null
+          && request.auth.uid == userId;
+          
+        // System can write analytics (via admin SDK)
+        allow write: if false; // Only server-side writes
+      }
+    }
+
+    // =====================================
+    // System Collections (Admin/Server Only)
+    // =====================================
+    match /system/{document=**} {
+      allow read, write: if false; // Only server-side access
+    }
+    
+    match /analytics/{document=**} {
+      allow read, write: if false; // Only server-side access
+    }
+    
+    // =====================================
+    // Chat and Real-time Collections
+    // =====================================
+    match /chats/{chatId} {
+      // Users can access chats they participate in
+      allow read, write: if request.auth != null
+        && request.auth.uid in resource.data.participants;
+    }
+    
+    match /generations/{generationId} {
+      // Users can access their own generations
+      allow read, write: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+    }
+
+    // =====================================
+    // Helper Functions
+    // =====================================
+    function hasRole(role) {
+      return request.auth != null
+        && request.auth.token.get('role', '') == role;
+    }
+    
+    function getParentApp() {
+      return get(/databases/$(database)/documents/applications/$(appId));
+    }
+    
+    function isAdmin() {
+      return hasRole('admin');
+    }
+    
+    function isOwner(resource) {
+      return request.auth != null
+        && request.auth.uid == resource.data.createdBy;
+    }
+  }
+}

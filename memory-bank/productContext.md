@@ -18,6 +18,10 @@ Provide a high-level overview of the project.
 
 ## Project Description
 
+Enterprise-grade AI application generator enabling users to describe applications and have AI generate, deploy, and host them instantly. Features comprehensive user management, collaborative editing, GitHub integration, secrets management, and advanced analytics. Supports multiple AI providers with custom configuration and BYOK capabilities.
+
+
+
 Stich Production is a sophisticated AI-powered web application generator built on Vercel's platform with Firebase backend services. The system enables users to describe an application and have AI generate, deploy, and host it instantly. This is a full-stack TypeScript application with React frontend and Firebase backend services.
 
 
@@ -28,6 +32,10 @@ An AI-powered platform that transforms natural language descriptions into fully 
 
 ## Architecture
 
+Sophisticated AI-powered web application generator with 4-phase feature expansion: MVP+ (public apps, real-time editing, GitHub export), Growth (secrets, model config, screenshots), Scale (custom providers, user management, chat), Enterprise (quotas, audit logging, compliance). Built on Firebase stack with Hono.js backend, using Firebase-native patterns for scalability and real-time features.
+
+
+
 Full-stack TypeScript application with React 19.1.1 frontend deployed on Vercel and Firebase backend including Functions, Firestore, Auth, Storage, and Real-time Database. Uses Firebase Functions with Hono.js framework for serverless backend API, Firebase Auth for authentication, Firestore for NoSQL database operations, Firebase Storage for file management, and Firebase Real-time Database for live updates during AI code generation.
 
 
@@ -37,6 +45,21 @@ Full-stack TypeScript application with React 19.1.1 frontend hosted on Vercel an
 
 
 ## Technologies
+
+- Firebase Functions
+- Firebase Firestore
+- Firebase Realtime Database
+- Firebase Storage
+- Firebase Auth
+- Hono.js
+- TypeScript
+- React 19.1.1
+- Vite
+- Vercel
+- Node.js 18
+- AI Providers (OpenAI, Anthropic, Google, Cerebras)
+
+
 
 - Vercel
 - Firebase Functions
@@ -72,6 +95,25 @@ Full-stack TypeScript application with React 19.1.1 frontend hosted on Vercel an
 
 
 ## Libraries and Dependencies
+
+- firebase-admin
+- firebase-functions
+- hono
+- zod
+- openai
+- @anthropic-ai/sdk
+- @google/generative-ai
+- sharp
+- crypto-js
+- jsonwebtoken
+- cors
+- compression
+- uuid
+- ws
+- bcryptjs
+- joi
+
+
 
 - React 19.1.1
 - Vite

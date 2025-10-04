@@ -44,6 +44,137 @@ const createAppsApp = () => {
         });
     });
     /**
+     * GET /public
+     * Get all public applications (no authentication required)
+     */
+    app.get('/public', async (c) => {
+        try {
+            const query = c.req.query();
+            const filters = {
+                framework: query.framework,
+                category: query.category,
+                search: query.search,
+                tags: query.tags ? query.tags.split(',') : undefined,
+            };
+            // Validate and set sortBy
+            const validSortBy = ['createdAt', 'views', 'likes', 'name'];
+            if (query.sortBy && validSortBy.includes(query.sortBy)) {
+                filters.sortBy = query.sortBy;
+            }
+            else {
+                filters.sortBy = 'createdAt';
+            }
+            // Validate and set sortOrder
+            const validSortOrder = ['asc', 'desc'];
+            if (query.sortOrder && validSortOrder.includes(query.sortOrder)) {
+                filters.sortOrder = query.sortOrder;
+            }
+            else {
+                filters.sortOrder = 'desc';
+            }
+            const limit = parseInt(query.limit || '20');
+            const offset = parseInt(query.offset || '0');
+            const result = await appService.getPublicApplications(filters, limit, offset);
+            return c.json((0, response_1.createSuccessResponse)(result));
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to get public applications:', error);
+            return c.json((0, response_1.createErrorResponse)('APPS_ERROR', 'Failed to get public applications'), 500);
+        }
+    });
+    /**
+     * GET /favorites
+     * Get user's favorite applications
+     */
+    app.get('/favorites', hono_auth_1.authMiddleware, async (c) => {
+        try {
+            const user = c.get('user');
+            const query = c.req.query();
+            const limit = parseInt(query.limit || '20');
+            const offset = parseInt(query.offset || '0');
+            const result = await appService.getUserFavorites(user.uid, limit, offset);
+            return c.json((0, response_1.createSuccessResponse)(result));
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to get favorite applications:', error);
+            return c.json((0, response_1.createErrorResponse)('APPS_ERROR', 'Failed to get favorite applications'), 500);
+        }
+    });
+    /**
+     * POST /:id/favorite
+     * Toggle favorite status for an application
+     */
+    app.post('/:id/favorite', hono_auth_1.authMiddleware, async (c) => {
+        try {
+            const user = c.get('user');
+            const appId = c.req.param('id');
+            const result = await appService.toggleFavorite(appId, user.uid);
+            return c.json((0, response_1.createSuccessResponse)(result));
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to toggle favorite:', error);
+            return c.json((0, response_1.createErrorResponse)('FAVORITE_ERROR', 'Failed to toggle favorite'), 500);
+        }
+    });
+    /**
+     * POST /:id/star
+     * Toggle star/like status for an application
+     */
+    app.post('/:id/star', hono_auth_1.authMiddleware, async (c) => {
+        try {
+            const user = c.get('user');
+            const appId = c.req.param('id');
+            const result = await appService.toggleStar(appId, user.uid);
+            return c.json((0, response_1.createSuccessResponse)(result));
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to toggle star:', error);
+            return c.json((0, response_1.createErrorResponse)('STAR_ERROR', 'Failed to toggle star'), 500);
+        }
+    });
+    /**
+     * POST /:id/fork
+     * Fork/copy an application to user's account
+     */
+    app.post('/:id/fork', hono_auth_1.authMiddleware, async (c) => {
+        try {
+            const user = c.get('user');
+            const appId = c.req.param('id');
+            const body = await c.req.json();
+            const forkData = {
+                name: body.name || undefined,
+                description: body.description || undefined,
+                isPublic: body.isPublic || false,
+            };
+            const forkedApp = await appService.forkApplication(appId, user.uid, forkData);
+            return c.json((0, response_1.createSuccessResponse)(forkedApp), 201);
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to fork application:', error);
+            return c.json((0, response_1.createErrorResponse)('FORK_ERROR', 'Failed to fork application'), 500);
+        }
+    });
+    /**
+     * PUT /:id/visibility
+     * Update application visibility settings
+     */
+    app.put('/:id/visibility', hono_auth_1.authMiddleware, async (c) => {
+        try {
+            const user = c.get('user');
+            const appId = c.req.param('id');
+            const body = await c.req.json();
+            const visibilityData = {
+                isPublic: body.isPublic,
+            };
+            await appService.updateAppVisibility(appId, user.uid, visibilityData);
+            return c.json((0, response_1.createSuccessResponse)({ message: 'Visibility updated successfully' }));
+        }
+        catch (error) {
+            firebase_functions_1.logger.error('Failed to update visibility:', error);
+            return c.json((0, response_1.createErrorResponse)('VISIBILITY_ERROR', 'Failed to update visibility'), 500);
+        }
+    });
+    /**
      * GET /
      * Get all applications for the authenticated user
      */

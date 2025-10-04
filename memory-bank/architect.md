@@ -5,6 +5,16 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Architectural Decisions
 
+- Implement advanced features in 4 phases: MVP+, Growth, Scale, Enterprise
+- Use Firebase-native patterns for real-time features instead of WebSockets where possible
+- Implement role-based access control using Firebase Auth custom claims
+- Use Firestore security rules for advanced permission management
+- Encrypt sensitive data (secrets, API keys) using server-side encryption
+- Leverage Firebase Analytics for comprehensive usage tracking
+- Implement screenshot generation using cloud functions and storage
+
+
+
 - Implement domain-driven service architecture with logical folder organization
 - Use conditional spread operators for exactOptionalPropertyTypes compliance
 - Maintain Firebase integration with proper configuration and type safety
@@ -45,6 +55,16 @@ This file contains the architectural decisions and design patterns for the Memor
 
 ## Design Considerations
 
+- Firebase Functions have cold start latency for WebSocket alternatives
+- Firestore has query limitations that may require denormalization for advanced search
+- Firebase Storage pricing for screenshot and file management at scale
+- Custom claims have a 1000 character limit for role data
+- Real-time database vs Firestore trade-offs for chat features
+- Security rule complexity for multi-tenant enterprise features
+- Rate limiting implementation using Firebase Functions quotas
+
+
+
 - TypeScript strict mode compatibility with exactOptionalPropertyTypes
 - Service layer scalability and maintainability
 - Firebase SDK integration and type safety
@@ -79,6 +99,98 @@ This file contains the architectural decisions and design patterns for the Memor
 
 
 ## Components
+
+### Advanced App Management
+
+Enhanced CRUD operations with public/private visibility, favorites, starring, and forking capabilities
+
+**Responsibilities:**
+
+- Public app listing with filtering
+- Favorites and starring system
+- App forking and templating
+- Visibility and permission controls
+
+### Real-time Collaboration
+
+WebSocket-like functionality using Firebase Realtime Database for live editing and chat
+
+**Responsibilities:**
+
+- Real-time code editing synchronization
+- Live chat during generation
+- Collaborative editing conflict resolution
+- User presence and activity tracking
+
+### Secrets Management
+
+Secure storage and management of user API keys and environment variables
+
+**Responsibilities:**
+
+- Encrypted secret storage
+- BYOK provider integration
+- Secret templates and sharing
+- Access control and audit logging
+
+### Model Configuration
+
+Per-user AI model settings and custom provider management
+
+**Responsibilities:**
+
+- AI provider preference management
+- Custom model parameter configuration
+- Provider testing and validation
+- Usage analytics and cost tracking
+
+### GitHub Integration
+
+OAuth-based repository export and code deployment to GitHub
+
+**Responsibilities:**
+
+- GitHub OAuth flow management
+- Repository creation and code push
+- Branch and commit automation
+- Template repository integration
+
+### Advanced Analytics
+
+Comprehensive usage tracking, user statistics, and performance monitoring
+
+**Responsibilities:**
+
+- User activity timeline generation
+- Usage metrics and billing data
+- Performance analytics collection
+- Custom dashboard creation
+
+### Screenshot System
+
+Automated app preview generation and image optimization
+
+**Responsibilities:**
+
+- Cloud function screenshot generation
+- Image optimization and CDN serving
+- Thumbnail creation for galleries
+- Preview lifecycle management
+
+### Enterprise Security
+
+Role-based access control, audit logging, and compliance features
+
+**Responsibilities:**
+
+- Role and permission management
+- Comprehensive audit trail
+- Compliance reporting
+- Data backup and recovery
+
+
+
+
 
 ### Core Services
 
