@@ -8,7 +8,9 @@ import {
   Minimize2,
   PanelLeft,
   PanelRight,
-  Layers
+  Layers,
+  Clock,
+  Bug
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -18,9 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { UserMessage, AIMessage, SystemMessage } from './Messages';
 import { ChatInput } from './ChatInput';
-import { FileExplorer, FileNode } from './FileExplorer';
+import { EnhancedFileManager, FileNode } from '@/components/file-manager';
 import { BlueprintIntegration } from '@/components/blueprint';
 import type { Blueprint } from '@/components/blueprint';
+import { PhaseTimeline, createMockPhases } from '@/components/phase';
+import type { GenerationPhase } from '@/components/phase';
+import { DebugPanel } from '@/components/debug';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -35,6 +40,7 @@ export default function AdvancedChat({ className }: ChatPageProps) {
   const [showFileExplorer, setShowFileExplorer] = useState(true);
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mockPhases] = useState<GenerationPhase[]>(createMockPhases());
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -66,6 +72,18 @@ export default function AdvancedChat({ className }: ChatPageProps) {
 
   const handleSendMessage = async (content: string, files?: File[]) => {
     await sendMessage(content, files);
+  };
+
+  // Convert old FileNode format to enhanced format
+  const convertToEnhancedFileNodes = (files: any[]): FileNode[] => {
+    return files.map(file => ({
+      ...file,
+      parentId: null, // Set to null for root level files, could be enhanced later
+      createdAt: file.modified || new Date(),
+      modifiedAt: file.modified || new Date(),
+      version: 1,
+      isReadonly: false
+    }));
   };
 
   const handleFileSelect = (file: FileNode) => {
@@ -338,21 +356,30 @@ Please generate the complete code structure including all necessary files, confi
             className="border-l bg-muted/30"
           >
             <Tabs defaultValue="files" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-2 mx-4 mt-4">
+              <TabsList className="grid w-full grid-cols-4 mx-4 mt-4">
                 <TabsTrigger value="files" className="text-sm">Files</TabsTrigger>
                 <TabsTrigger value="blueprint" className="text-sm">
                   <Layers className="w-4 h-4 mr-1" />
                   Blueprint
                 </TabsTrigger>
+                <TabsTrigger value="phases" className="text-sm">
+                  <Clock className="w-4 h-4 mr-1" />
+                  Phases
+                </TabsTrigger>
+                <TabsTrigger value="debug" className="text-sm">
+                  <Bug className="w-4 h-4 mr-1" />
+                  Debug
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="files" className="flex-1 m-0">
-                <FileExplorer
-                  files={session?.files || []}
+                <EnhancedFileManager
+                  files={convertToEnhancedFileNodes(session?.files || [])}
                   onFileSelect={handleFileSelect}
                   onFileDownload={handleFileDownload}
                   {...(selectedFile?.id && { selectedFileId: selectedFile.id })}
                   className="h-full"
+                  readOnly={false}
                 />
               </TabsContent>
               
@@ -361,6 +388,24 @@ Please generate the complete code structure including all necessary files, confi
                   onBlueprintGenerate={handleBlueprintGenerate}
                   onCodeGenerate={handleCodeGenerate}
                   onBlueprintShare={handleBlueprintShare}
+                  className="h-full"
+                />
+              </TabsContent>
+              
+              <TabsContent value="phases" className="flex-1 m-0 p-4">
+                <PhaseTimeline
+                  phases={mockPhases}
+                  {...(isGenerating && { currentPhaseId: 'planning' })}
+                  {...(isGenerating && { currentStepId: 'select-technologies' })}
+                  compact={true}
+                  className="h-full"
+                />
+              </TabsContent>
+              
+              <TabsContent value="debug" className="flex-1 m-0 p-4">
+                <DebugPanel
+                  isActive={true}
+                  {...(session?.id && { sessionId: session.id })}
                   className="h-full"
                 />
               </TabsContent>

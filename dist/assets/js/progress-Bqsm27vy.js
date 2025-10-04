@@ -1,0 +1,2 @@
+import{j as r}from"./ui-Ct5cQbGm.js";import{r as a}from"./router-BzeIgkns.js";import{c as s}from"./index-DEqFfg-I.js";const e=a.forwardRef(({className:a,value:e=0,max:o=100,...i},l)=>{const t=Math.min(100,Math.max(0,e/o*100));return r.jsx("div",{ref:l,className:s("relative h-4 w-full overflow-hidden rounded-full bg-secondary",a),...i,children:r.jsx("div",{className:"h-full bg-primary transition-all duration-300 ease-in-out",style:{width:`${t}%`}})})});e.displayName="Progress";export{e as P};
+//# sourceMappingURL=progress-Bqsm27vy.js.map
