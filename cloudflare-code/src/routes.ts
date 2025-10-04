@@ -9,6 +9,8 @@ import Settings from './routes/settings/index';
 import AppsPage from './routes/apps';
 import AppView from './routes/app';
 import DiscoverPage from './routes/discover';
+import Gallery from './routes/gallery';
+import FileManagerPage from './routes/file-manager';
 import { ProtectedRoute } from './routes/protected-route';
 
 const routes = [
@@ -43,6 +45,14 @@ const routes = [
 			{
 				path: 'discover',
 				Component: DiscoverPage,
+			},
+			{
+				path: 'gallery',
+				Component: Gallery,
+			},
+			{
+				path: 'files/:appId',
+				element: React.createElement(ProtectedRoute, { children: React.createElement(FileManagerPage) }),
 			},
 		],
 	},
